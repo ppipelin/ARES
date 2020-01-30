@@ -1,0 +1,5 @@
+bin/x64
+bin/x86
+bin/ares/x64
+bin/ares/x86
+bin/.vs
