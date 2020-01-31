@@ -26,7 +26,7 @@ def main():
 	window = pygame.display.set_mode((W,H), DOUBLEBUF | OPENGL)
 	FPS = 30.0
 	TPF = 1.0/FPS
-	n = 0	
+	n = 0
 	
 	[textID, y, x] = init_background_texture(H, W)
 	
@@ -34,12 +34,22 @@ def main():
 		begin_t = time.time()
 		
 		frame = video[n,:,:,:]
-		clear(frame, H, W, y, x, textID)
 		
 		# 1/ Do the pose estimation
 		
+
+		gray = frame
+		surf = cv2.xfeatures2d.SURF_create()
+		kp = surf.detect(gray,None)
+		img=cv2.drawKeypoints(gray,kp,frame) 	# par ref
+		clear(frame, H, W, y, x, textID)
+
 		# 2/ Render an object
+		render_cube(H, W);
 		
+		
+		
+
 		pygame.display.flip()
 		n = (n + 1) % N
 		time.sleep(max(0,TPF - time.time() + begin_t))
