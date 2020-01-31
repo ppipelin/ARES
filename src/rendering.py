@@ -51,6 +51,7 @@ def clear(image, H, W, y, x, textID):
 
 
 def render_cube(H,W):
+
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	glMatrixMode (GL_PROJECTION)
