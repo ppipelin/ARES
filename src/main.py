@@ -38,7 +38,10 @@ def main():
 		
 		# 1/ Do the pose estimation
 		
+		
 		# 2/ Render an object
+		render_cube(H, W);
+		
 		
 		pygame.display.flip()
 		n = (n + 1) % N

@@ -2,6 +2,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import math
 import numpy as np
+from primitives import *
 
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
 def init_background_texture(H, W):
@@ -47,3 +48,16 @@ def clear(image, H, W, y, x, textID):
 	glTexCoord2f(0, y)
 	glVertex2f(0, H)
 	glEnd()
+
+
+def render_cube(H,W):
+	glEnable(GL_DEPTH_TEST)
+	glBindTexture(GL_TEXTURE_2D, 0) 
+	glMatrixMode (GL_PROJECTION)
+	glLoadIdentity()
+	gluPerspective(45, (W/H), 0.1, 50.0)
+	glTranslatef(0.0,0.0, -5)
+	glMatrixMode(GL_MODELVIEW)
+	Cube();
+
+	glColor(255.0, 255.0, 255.0, 255.0)
