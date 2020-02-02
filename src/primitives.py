@@ -14,9 +14,9 @@ verticies = [
 ]
 
 colors = [
-    (1.0, 0.0, 0.0),
-    (0.0, 1.0, 0.0),
-    (0.0, 0.0, 1.0),
+    (1.0, 0.0, 0.0,0.5),
+    (0.0, 1.0, 0.0,0.5),
+    (0.0, 0.0, 1.0,0.5),
 ]
 
 edges = [
@@ -48,7 +48,7 @@ def Cube():
     glBegin(GL_QUADS)
     x = 0
     for surface in surfaces:
-        glColor3fv(colors[x])
+        glColor4fv(colors[x])
         x = (x + 1) % len(colors)
         for vertex in surface:
             

@@ -25,9 +25,10 @@ def main():
 	# """"""precisely estimated calibration"""""""""
 	K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
 	Rt = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-	angle = np.pi/2
+	angle = -np.pi/2
 	ciTw = np.matrix([[1,0,0,0],[0, np.cos(angle), -np.sin(angle), 0],[0, np.sin(angle), np.cos(angle), -1.0], [0,0,0,1]])
 	
+
 	
 	print('Pygame initilization...')
 	pygame.init()
@@ -36,7 +37,7 @@ def main():
 	
 	FPS = 30.0
 	TPF = 1.0/FPS
-	n = 0
+	n = 90
 	
 	print('Background video texture initialization...')
 	[textID, y, x] = init_background_texture(H, W)
@@ -71,6 +72,7 @@ def main():
 		frame = video[n,:,:,:]
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		clear(frame, H, W, y, x, textID)
+		
 		# 1/ Do the pose estimation
 		
 		kp_frame, des_frame = detector.detectAndCompute(gray, None)
@@ -92,10 +94,13 @@ def main():
 				dst = cv2.perspectiveTransform(pts, Homography)
 				cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
 				cTci = compute_cTci(K, Homography)
-				cTw = cTci * ciTw;
-				#render_cube(cTw, K, H, W)
+				cTw = cTci#np.dot(cTci,ciTw);
+				#cTw = np.linalg.inv(cTw)
+				print('cTw')
+				print(cTw)
+				render_cube(cTw, K, H, W)
 		
-		clear(frame, H, W, y, x, textID)
+		
 		
 		#cv2.waitKey(0)
 		# 2/ Render an object
@@ -135,21 +140,45 @@ def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
 	two_matches = filter(lambda x: len(x) ==2, matches)
 	better_matches = filter(lambda x: x[0].distance < x[1].distance*min_ratio, two_matches)
 	return list(map(lambda x : x[0], better_matches))
-	
+
+#thanks python for offering basic functions
+def normalize(v):
+	norm = np.linalg.norm(v)
+	if norm == 0: 
+		return v
+	return v / norm
+
 def compute_cTci(K,homography):
 
 	# Compute rotation along the x and y axis as well as the translation
+	# rot_and_transl = np.dot(np.linalg.inv(K), homography)
+	# print(rot_and_transl)
+	# c1 = rot_and_transl[:, 0]
+	# c2 = rot_and_transl[:, 1]
+	# citc = rot_and_transl[:, 2]
+	# c3 = np.cross(c1,c2, axis = 0)
+	# cRtci = np.column_stack((c1, c2, c3, citc));
+	# print('cRtci')
+	# print(cRtci)
+	# return np.vstack([cRtci, [0,0,0,1]])
+
+	#Compute rotation along the x and y axis as well as the translation
 	homography = homography * (-1)
 	rot_and_transl = np.dot(np.linalg.inv(K), homography)
 	col_1 = rot_and_transl[:, 0]
 	col_2 = rot_and_transl[:, 1]
 	col_3 = rot_and_transl[:, 2]
-	# normalise vectors
+	
+	print('rot_and_transl')
+	print(rot_and_transl)
+	print('Kinv')
+	print(np.linalg.inv(K))
+	#normalise vectors
 	l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
 	rot_1 = col_1 / l
 	rot_2 = col_2 / l
 	translation = col_3 / l
-	# compute the orthonormal basis
+	#compute the orthonormal basis
 	c = rot_1 + rot_2
 
 	p = np.cross(rot_1, rot_2, axis = 0)
@@ -157,9 +186,12 @@ def compute_cTci(K,homography):
 	rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_3 = np.cross(rot_1, rot_2, axis = 0)
-	# finally, compute the 3D projection matrix from the model to the current frame
-	cTci = np.stack((rot_1.T, rot_2.T, rot_3.T, translation.T)).T
+
+	#finally, compute the 3D projection matrix from the model to the current frame
+	cTci = np.column_stack((rot_1, rot_2, rot_3, translation))
 	cTci = np.vstack([cTci, [0,0,0,1]])
+	print('cTci')
+	print(cTci)
 	return cTci
 
 main()
