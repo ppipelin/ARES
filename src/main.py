@@ -17,9 +17,17 @@ from pose_estimation import *
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
 def main():
-	
-	video= load_video('data/video_ArUco_2.mp4')
+	video_path = 'data/video_sophia.mp4'
+	print('loading video from path : ' +  video_path +'...')	
+	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
+	
+	# """"""precisely estimated calibration"""""""""
+	K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
+	Rt = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+	angle = np.pi/2
+	ciTw = np.matrix([[1,0,0,0],[0, np.cos(angle), -np.sin(angle), 0],[0, np.sin(angle), np.cos(angle), -1.0], [0,0,0,1]])
+	
 	
 	print('Pygame initilization...')
 	pygame.init()
@@ -37,34 +45,39 @@ def main():
 	print('Detector creation and feature detection on model...')
 	detector = cv2.xfeatures2d.SURF_create()
 	#detector = cv2.xfeatures2d.SIFT_create()
-	#detector= cv2.ORB_create(10000)
-	detector.setHessianThreshold(2000)
+	#detector= cv2.ORB_create(100)
+	detector.setHessianThreshold(2500)#uncomment when using SURF
 	#detector.setUpright(True)
 	
-	model = cv2.imread('data/ArUco.png')
+	model = cv2.imread('data/sophia.png')
 	H_model, W_model, C_model = model.shape
+	model = cv2.cvtColor(model,cv2.COLOR_BGR2GRAY)
 	
-	# cv2.drawKeypoints(model,kp_model,model)
-	# cv2.imshow('model', model)
-	# cv2.waitKey(0)
 	kp_model, des_model = detector.detectAndCompute(model, None)
+	print('Keypoints/Descriptors : '+str(len(kp_model)))
 
-	#bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-	bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-	
-	min_match = 15;
+	model = cv2.drawKeypoints(model,kp_model,model) 
+	cv2.imshow('model', model)
+	#cv2.waitKey(0)
+	flann_params = dict(algorithm = 6, table_number = 6, key_size = 12, multi_probe_level = 1)
+	#matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) # uncomment when using ORB
+	matcher = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True) # uncomment when using SIFT or SURF
+	#matcher = cv2.FlannBasedMatcher(flann_params, {})
+	min_match = 15; #render anything only if nb_matches > min_match
 	
 	print('Ready')
 	while True:
 		begin_t = time.time()
 		frame = video[n,:,:,:]
-
-		
+		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+		clear(frame, H, W, y, x, textID)
 		# 1/ Do the pose estimation
 		
-		kp_frame, des_frame = detector.detectAndCompute(frame, None)
+		kp_frame, des_frame = detector.detectAndCompute(gray, None)
+		matches = matcher.match(des_model, des_frame)
+		#matches = matches_ratio_test(matcher, des_model, des_frame, 0.75)
+		#print(len(matches))
 		
-		matches = bf.match(des_model, des_frame)
 		matches = sorted(matches, key=lambda x: x.distance)
 		
 		if len(matches) > min_match:
@@ -74,11 +87,16 @@ def main():
 			src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
 			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-			pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
-			dst = cv2.perspectiveTransform(pts, Homography)
-			cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA) 
+			if Homography is not None:
+				pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
+				dst = cv2.perspectiveTransform(pts, Homography)
+				cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+				cTci = compute_cTci(K, Homography)
+				cTw = cTci * ciTw;
+				#render_cube(cTw, K, H, W)
 		
 		clear(frame, H, W, y, x, textID)
+		
 		#cv2.waitKey(0)
 		# 2/ Render an object
 		#=render_cube(H, W)
@@ -102,7 +120,6 @@ def main():
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 
 def load_video(path):
 	cap = cv2.VideoCapture(path)
-	print('loading video from path : ' +  path +'...')	
 	video = []
 	while(cap.isOpened()):
 		ret, frame = cap.read()
@@ -112,7 +129,37 @@ def load_video(path):
 			break
 	return np.array(video)
 	
+#https://medium.com/@ahmetozlu93/marker-less-augmented-reality-by-opencv-and-opengl-531b2af0a130
+def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
+	matches = matcher.knnMatch(des_1, des_2, 2)
+	two_matches = filter(lambda x: len(x) ==2, matches)
+	better_matches = filter(lambda x: x[0].distance < x[1].distance*min_ratio, two_matches)
+	return list(map(lambda x : x[0], better_matches))
+	
+def compute_cTci(K,homography):
 
+	# Compute rotation along the x and y axis as well as the translation
+	homography = homography * (-1)
+	rot_and_transl = np.dot(np.linalg.inv(K), homography)
+	col_1 = rot_and_transl[:, 0]
+	col_2 = rot_and_transl[:, 1]
+	col_3 = rot_and_transl[:, 2]
+	# normalise vectors
+	l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
+	rot_1 = col_1 / l
+	rot_2 = col_2 / l
+	translation = col_3 / l
+	# compute the orthonormal basis
+	c = rot_1 + rot_2
 
+	p = np.cross(rot_1, rot_2, axis = 0)
+	d = np.cross(c, p, axis = 0)
+	rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+	rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+	rot_3 = np.cross(rot_1, rot_2, axis = 0)
+	# finally, compute the 3D projection matrix from the model to the current frame
+	cTci = np.stack((rot_1.T, rot_2.T, rot_3.T, translation.T)).T
+	cTci = np.vstack([cTci, [0,0,0,1]])
+	return cTci
 
 main()

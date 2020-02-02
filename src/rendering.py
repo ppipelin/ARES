@@ -49,16 +49,65 @@ def clear(image, H, W, y, x, textID):
 	glVertex2f(0, H)
 	glEnd()
 
+def set_projection_from_camera(K, H, W):
+  """  Set view from a camera calibration matrix. """
 
-def render_cube(H,W):
+  glMatrixMode(GL_PROJECTION)
+  glLoadIdentity()
 
+  fx = K[0,0]
+  fy = K[1,1]
+  fovy = 2*np.arctan(0.5*H/fy)*180/np.pi
+  aspect = (W*fy)/(H*fx)
+
+  # define the near and far clipping planes
+  near = 0.1
+  far = 100.0
+
+  # set perspective
+  gluPerspective(fovy,aspect,near,far)
+  glViewport(0,0,W,H)
+
+def set_modelview_from_camera(cTw):
+	"""  Set the model view matrix from camera pose. """
+	Rt = np.delete(cTw, 1, 0)
+	glMatrixMode(GL_MODELVIEW)
+	glLoadIdentity()
+
+	# rotate teapot 90 deg around x-axis so that z-axis is up
+	Rx = np.array([[1,0,0],[0,0,-1],[0,1,0]])
+
+	# set rotation to best approximation
+	R = Rt[:,:3]
+	U,S,V = np.linalg.svd(R)
+	R = np.dot(U,V)
+	R[0,:] = -R[0,:] # change sign of x-axis
+
+	# set translation
+	t = np.squeeze(Rt[:,3])
+
+	# setup 4*4 model view matrix
+	M = np.eye(4)
+	M[:3,:3] = np.dot(R,Rx)
+	M[:3,3] = t
+
+	# transpose and flatten to get column order
+	M = M.T
+	m = M.flatten() 
+
+	# replace model view with the new matrix
+	glLoadMatrixf(m)
+  
+def render_cube(Rt, K, H,W):
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
-	glMatrixMode (GL_PROJECTION)
+	# glMatrixMode (GL_PROJECTION)
+	# glLoadIdentity()
+	#glLoadMatrixf(K)
+	# gluPerspective(45, (W/H), 0.1, 50.0)
+	set_projection_from_camera(K, H, W)
+	set_modelview_from_camera(Rt)
 	glLoadIdentity()
-	gluPerspective(45, (W/H), 0.1, 50.0)
-	glTranslatef(0.0,0.0, -5)
-	glMatrixMode(GL_MODELVIEW)
 	Cube();
 
 	glColor(255.0, 255.0, 255.0, 255.0)
