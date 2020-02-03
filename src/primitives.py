@@ -3,20 +3,26 @@ from OpenGL.GLU import *
 
 
 verticies = [
-    (0.1, -0.1, -0.1),
-    (0.1, 0.1, -0.1),
-    (-0.1, 0.1, -0.1),
-    (-0.1, -0.1, -0.1),
-    (0.1, -0.1, 0.1),
-    (0.1, 0.1, 0.1),
-    (-0.1, -0.1, 0.1),
-    (-0.1, 0.1, 0.1),
+    (1, -1, -1),
+    (1, 1, -1),
+    (-1, 1, -1),
+    (-1, -1, -1),
+    (1, -1, 1),
+    (1, 1, 1),
+    (-1, -1, 1),
+    (-1, 1, 1),
 ]
 
 colors = [
     (1.0, 0.0, 0.0,0.5),
     (0.0, 1.0, 0.0,0.5),
     (0.0, 0.0, 1.0,0.5),
+	(0.0, 1.0, 0.5,0.5),
+	(0.0, 0.0, 1.0,0.5),
+	(1.0, 0.0, 1.0,0.5),
+	(1.0, 1.0, 0.0,0.5),
+	(1.0, 0.5, 0.5,0.5),
+	(1.0, 1.0, 1.0,0.5),
 ]
 
 edges = [
@@ -45,18 +51,18 @@ surfaces = [
 
 
 def Cube():
-    glBegin(GL_QUADS)
-    x = 0
-    for surface in surfaces:
-        glColor4fv(colors[x])
-        x = (x + 1) % len(colors)
-        for vertex in surface:
-            
-            glVertex3fv(verticies[vertex])
-    glEnd()
-
-    glBegin(GL_LINES)
-    for edge in edges:
-        for vertex in edge:
-            glVertex3fv(verticies[vertex])
-    glEnd()
+	glBegin(GL_QUADS)
+	x = 0
+	for surface in surfaces:
+		glColor4fv(colors[x])
+		x = (x + 1) % len(colors)
+		for vertex in surface:
+			glVertex3fv(verticies[vertex])
+	glEnd()
+	glBegin(GL_LINES)
+	for edge in edges:
+		x = (x + 1) % len(colors)
+		glColor4fv(colors[x])
+		for vertex in edge:
+			glVertex3fv(verticies[vertex])
+	glEnd()

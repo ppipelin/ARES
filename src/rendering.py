@@ -59,8 +59,8 @@ def set_projection_from_camera(K, H, W):
 	fy = K[1,1]
 	fovy = 2*np.arctan(0.5*H/fy)*180/np.pi
 	aspect = (W*fy)/(H*fx)
-	print('fovy '+ str(fovy))
-	print('aspect '+ str(aspect))
+	# print('fovy '+ str(fovy))
+	# print('aspect '+ str(aspect))
 	# define the near and far clipping planes
 	near = 0.1
 	far = 100.0
@@ -108,6 +108,10 @@ def set_modelview_from_camera(cTw):
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
 	viewMatrix = np.dot(cv_to_gl, cTw)
+	viewMatrix[0,3] *= 0.01
+	viewMatrix[1,3] *= 0.01
+	viewMatrix[2,3] *= 0.01
+	#print(viewMatrix)
 	viewMatrix = viewMatrix.T
 	viewMatrix = viewMatrix.flatten() 
 
@@ -120,15 +124,19 @@ def render_cube(Rt, K, H,W):
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	# glMatrixMode (GL_PROJECTION)
-	# glLoadIdentity()
+	#glLoadIdentity()
 	#glLoadMatrixf(K)
 	
 	# gluPerspective(45, (W/H), 0.1, 50.0)
 	#glPushMatrix();
+	
 	set_projection_from_camera(K, H, W)
 	set_modelview_from_camera(Rt)
-	glLoadIdentity()
-	glTranslatef(0,0,-1.5)
+	#glMatrixMode(GL_MODELVIEW)
+	#glLoadIdentity()
+	#set_modelview_from_camera(Rt)
+	
+	#glTranslatef(0,0,-10)
 	
 	
 	glEnable(GL_BLEND);

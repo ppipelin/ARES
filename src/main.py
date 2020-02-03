@@ -23,7 +23,9 @@ def main():
 	[N, H, W, C] =  video.shape
 	
 	# """"""precisely estimated calibration"""""""""
+	#K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
 	K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
+
 	Rt = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 	angle = -np.pi/2
 	ciTw = np.matrix([[1,0,0,0],[0, np.cos(angle), -np.sin(angle), 0],[0, np.sin(angle), np.cos(angle), -1.0], [0,0,0,1]])
@@ -44,10 +46,10 @@ def main():
 
 	
 	print('Detector creation and feature detection on model...')
-	detector = cv2.xfeatures2d.SURF_create()
-	#detector = cv2.xfeatures2d.SIFT_create()
-	#detector= cv2.ORB_create(100)
-	detector.setHessianThreshold(2500)#uncomment when using SURF
+	#detector = cv2.xfeatures2d.SURF_create()
+	detector = cv2.xfeatures2d.SIFT_create()
+	#detector= cv2.ORB_create(30000)
+	#detector.setHessianThreshold(2500) #uncomment when using SURF
 	#detector.setUpright(True)
 	
 	model = cv2.imread('data/sophia.png')
@@ -89,6 +91,9 @@ def main():
 			src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
 			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+			#Homography = -Homography
+			# print('Homography')
+			# print(Homography)
 			if Homography is not None:
 				pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
 				dst = cv2.perspectiveTransform(pts, Homography)
@@ -96,8 +101,8 @@ def main():
 				cTci = compute_cTci(K, Homography)
 				cTw = cTci#np.dot(cTci,ciTw);
 				#cTw = np.linalg.inv(cTw)
-				print('cTw')
-				print(cTw)
+				# print('cTw')
+				# print(cTw)
 				render_cube(cTw, K, H, W)
 		
 		
@@ -163,16 +168,16 @@ def compute_cTci(K,homography):
 	# return np.vstack([cRtci, [0,0,0,1]])
 
 	#Compute rotation along the x and y axis as well as the translation
-	homography = homography * (-1)
+	#homography = homography * (-1)
 	rot_and_transl = np.dot(np.linalg.inv(K), homography)
 	col_1 = rot_and_transl[:, 0]
 	col_2 = rot_and_transl[:, 1]
 	col_3 = rot_and_transl[:, 2]
 	
-	print('rot_and_transl')
-	print(rot_and_transl)
-	print('Kinv')
-	print(np.linalg.inv(K))
+	# print('rot_and_transl')
+	# print(rot_and_transl)
+	# print('Kinv')
+	# print(np.linalg.inv(K))
 	#normalise vectors
 	l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
 	rot_1 = col_1 / l
@@ -190,8 +195,8 @@ def compute_cTci(K,homography):
 	#finally, compute the 3D projection matrix from the model to the current frame
 	cTci = np.column_stack((rot_1, rot_2, rot_3, translation))
 	cTci = np.vstack([cTci, [0,0,0,1]])
-	print('cTci')
-	print(cTci)
+	# print('cTci')
+	# print(cTci)
 	return cTci
 
 main()
