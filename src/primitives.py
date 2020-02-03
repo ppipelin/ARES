@@ -1,5 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *
+import numpy as np
 
 
 verticies = [
@@ -14,15 +16,15 @@ verticies = [
 ]
 
 colors = [
-    (1.0, 0.0, 0.0,0.5),
-    (0.0, 1.0, 0.0,0.5),
-    (0.0, 0.0, 1.0,0.5),
-	(0.0, 1.0, 0.5,0.5),
-	(0.0, 0.0, 1.0,0.5),
-	(1.0, 0.0, 1.0,0.5),
-	(1.0, 1.0, 0.0,0.5),
-	(1.0, 0.5, 0.5,0.5),
-	(1.0, 1.0, 1.0,0.5),
+    (1.0, 0.0, 0.0),
+    (0.0, 1.0, 0.0),
+    (0.0, 0.0, 1.0),
+	(0.0, 1.0, 0.5),
+	(0.0, 0.0, 1.0),
+	(1.0, 0.0, 1.0),
+	(1.0, 1.0, 0.0),
+	(1.0, 0.5, 0.5),
+	(1.0, 1.0, 1.0),
 ]
 
 edges = [
@@ -50,19 +52,21 @@ surfaces = [
 ]
 
 
-def Cube():
-	glBegin(GL_QUADS)
-	x = 0
-	for surface in surfaces:
-		glColor4fv(colors[x])
-		x = (x + 1) % len(colors)
-		for vertex in surface:
-			glVertex3fv(verticies[vertex])
-	glEnd()
-	glBegin(GL_LINES)
-	for edge in edges:
-		x = (x + 1) % len(colors)
-		glColor4fv(colors[x])
-		for vertex in edge:
-			glVertex3fv(verticies[vertex])
-	glEnd()
+def Cube(t):
+    alpha = 0.3 * np.sin(5*t) + 0.7
+    glBegin(GL_QUADS)
+    x = 0
+
+    for surface in surfaces:
+        glColor4fv((colors[x][0], colors[x][1],colors[x][2], alpha))
+        x = (x + 1) % len(colors)
+        for vertex in surface:
+            glVertex3fv(verticies[vertex])
+    glEnd()
+    # glBegin(GL_LINES)
+    # for edge in edges:
+    # 	x = (x + 1) % len(colors)
+    # 	glColor4fv(colors[x])
+    # 	for vertex in edge:
+    # 		glVertex3fv(verticies[vertex])
+    # glEnd()

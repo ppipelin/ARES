@@ -17,18 +17,20 @@ from pose_estimation import *
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
 def main():
-	video_path = 'data/video_sophia.mp4'
+	
+	video_path = 'data/video_plateau.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
 	
 	# """"""precisely estimated calibration"""""""""
-	#K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
-	K = np.matrix([[800, 0, W/2], [0, 800, H/2], [0, 0, 1]])
+	F = 800
+	u0 = W/2
+	v0 = H/2
+	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
 
-	Rt = np.matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-	angle = -np.pi/2
-	ciTw = np.matrix([[1,0,0,0],[0, np.cos(angle), -np.sin(angle), 0],[0, np.sin(angle), np.cos(angle), -1.0], [0,0,0,1]])
+	angle = 0;#-np.pi/4
+	ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
 
 	
@@ -47,12 +49,12 @@ def main():
 	
 	print('Detector creation and feature detection on model...')
 	#detector = cv2.xfeatures2d.SURF_create()
-	detector = cv2.xfeatures2d.SIFT_create()
-	#detector= cv2.ORB_create(30000)
+	#detector = cv2.xfeatures2d.SIFT_create()
+	detector= cv2.ORB_create(250)
 	#detector.setHessianThreshold(2500) #uncomment when using SURF
 	#detector.setUpright(True)
 	
-	model = cv2.imread('data/sophia.png')
+	model = cv2.imread('data/plateau.png')
 	H_model, W_model, C_model = model.shape
 	model = cv2.cvtColor(model,cv2.COLOR_BGR2GRAY)
 	
@@ -63,8 +65,8 @@ def main():
 	cv2.imshow('model', model)
 	#cv2.waitKey(0)
 	flann_params = dict(algorithm = 6, table_number = 6, key_size = 12, multi_probe_level = 1)
-	#matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) # uncomment when using ORB
-	matcher = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True) # uncomment when using SIFT or SURF
+	matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) # uncomment when using ORB
+	#matcher = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True) # uncomment when using SIFT or SURF
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_match = 15; #render anything only if nb_matches > min_match
 	
@@ -95,15 +97,14 @@ def main():
 			# print('Homography')
 			# print(Homography)
 			if Homography is not None:
-				pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
-				dst = cv2.perspectiveTransform(pts, Homography)
-				cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+				#pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
+				#dst = cv2.perspectiveTransform(pts, Homography)
+				#cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
 				cTci = compute_cTci(K, Homography)
-				cTw = cTci#np.dot(cTci,ciTw);
-				#cTw = np.linalg.inv(cTw)
+				cTw = np.dot(cTci,ciTw)
 				# print('cTw')
 				# print(cTw)
-				render_cube(cTw, K, H, W)
+				render_cube(cTw, K, H, W, n * TPF)
 		
 		
 		
@@ -122,8 +123,6 @@ def main():
 				pygame.display.quit()
 				pygame.quit()
 				exit()
-	
-	
 	pygame.quit()
 
 

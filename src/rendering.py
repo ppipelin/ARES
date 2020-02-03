@@ -120,29 +120,19 @@ def set_modelview_from_camera(cTw):
 	glLoadIdentity()
 	glLoadMatrixf(viewMatrix)
   
-def render_cube(Rt, K, H,W):
+def render_cube(cTw, K, H,W,t):
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
-	# glMatrixMode (GL_PROJECTION)
-	#glLoadIdentity()
-	#glLoadMatrixf(K)
-	
-	# gluPerspective(45, (W/H), 0.1, 50.0)
-	#glPushMatrix();
 	
 	set_projection_from_camera(K, H, W)
-	set_modelview_from_camera(Rt)
-	#glMatrixMode(GL_MODELVIEW)
-	#glLoadIdentity()
-	#set_modelview_from_camera(Rt)
+	set_modelview_from_camera(cTw)
 	
-	#glTranslatef(0,0,-10)
+	glEnable(GL_BLEND)
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+	Cube(t)
 	
-	
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	Cube()
 	glLoadIdentity()
-	glDisable(GL_BLEND);
+	glDisable(GL_BLEND)
 
 	glColor(255.0, 255.0, 255.0, 255.0)
