@@ -13,6 +13,7 @@ import math
 import time
 from rendering import *
 from pose_estimation import *
+from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
@@ -33,6 +34,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
 
+
 	
 	print('Pygame initilization...')
 	pygame.init()
@@ -42,6 +44,11 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	FPS = 30.0
 	TPF = 1.0/FPS
 	n = 90
+
+	print('Model loading...')
+	model_path = 'data/models/teapot/'
+	model = Model()
+	model.load_from_obj(model_path+'model.obj')
 	
 	print('Background video texture initialization...')
 	[textID, y, x] = init_background_texture(H, W)
@@ -57,15 +64,16 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	if descriptor_choice == 'surf':
 		detector.setHessianThreshold(int(opt.extra_desc_param))
 	
-	model = cv2.imread(data_folder + 'plateau.png')
-	H_model, W_model, C_model = model.shape
-	model = cv2.cvtColor(model,cv2.COLOR_BGR2GRAY)
+	marker = cv2.imread('data/plateau.png')
+	H_marker, W_marker, C_marker = marker.shape
+	marker = cv2.cvtColor(marker,cv2.COLOR_BGR2GRAY)
 	
-	kp_model, des_model = detector.detectAndCompute(model, None)
-	print('Keypoints/Descriptors : '+str(len(kp_model)))
+	
+	kp_marker, des_marker = detector.detectAndCompute(marker, None)
+	print('Keypoints/Descriptors : '+str(len(kp_marker)))
 
-	model = cv2.drawKeypoints(model,kp_model,model) 
-	cv2.imshow('model', model)
+	marker = cv2.drawKeypoints(marker,kp_marker,marker) 
+	cv2.imshow('marker', marker)
 	#cv2.waitKey(0)
 	flann_params = dict(algorithm = 6, table_number = 6, key_size = 12, multi_probe_level = 1)
 	
@@ -87,32 +95,32 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 		# 1/ Do the pose estimation
 		
 		kp_frame, des_frame = detector.detectAndCompute(gray, None)
-		matches = matcher.match(des_model, des_frame)
-		#matches = matches_ratio_test(matcher, des_model, des_frame, 0.75)
+		matches = matcher.match(des_marker, des_frame)
+		#matches = matches_ratio_test(matcher, des_marker, des_frame, 0.75)
 		#print(len(matches))
 		
 		matches = sorted(matches, key=lambda x: x.distance)
 		
 		if len(matches) > min_match:
 			#cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
-			#cap = cv2.drawMatches(model, kp_model, frame, kp_frame, matches[:min_match], 0, flags=2)
+			#cap = cv2.drawMatches(marker, kp_marker, frame, kp_frame, matches[:min_match], 0, flags=2)
 			#cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
-			#cv2.waitKey(0)
-			src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+			src_pts = np.float32([kp_marker[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
 			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 			#Homography = -Homography
 			# print('Homography')
 			# print(Homography)
 			if Homography is not None:
-				#pts = np.float32([[0, 0], [0, H_model - 1], [W_model - 1, H_model - 1], [W_model - 1, 0]]).reshape(-1, 1, 2)
+				#pts = np.float32([[0, 0], [0, H_marker - 1], [W_marker - 1, H_marker - 1], [W_marker - 1, 0]]).reshape(-1, 1, 2)
 				#dst = cv2.perspectiveTransform(pts, Homography)
 				#cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
 				cTci = compute_cTci(K, Homography)
 				cTw = np.dot(cTci,ciTw)
 				# print('cTw')
 				# print(cTw)
-				render_cube(cTw, K, H, W, n * TPF)
+				#render_cube(cTw, K, H, W, n * TPF)
+				render_model(model, cTw, K, H, W, n*TPF)
 		
 		
 		
@@ -199,7 +207,7 @@ def compute_cTci(K,homography):
 	rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_3 = np.cross(rot_1, rot_2, axis = 0)
 
-	#finally, compute the 3D projection matrix from the model to the current frame
+	#finally, compute the 3D projection matrix from the marker to the current frame
 	cTci = np.column_stack((rot_1, rot_2, rot_3, translation))
 	cTci = np.vstack([cTci, [0,0,0,1]])
 	# print('cTci')
