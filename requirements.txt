@@ -4,3 +4,4 @@ pygame
 PyOpenGL
 argparse
 imutils
+pillow
