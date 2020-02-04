@@ -25,9 +25,9 @@ def main():
 	[N, H, W, C] =  video.shape
 	
 	# """"""precisely estimated calibration"""""""""
-	F = 800
-	u0 = W/2
-	v0 = H/2
+	F = 270
+	u0 = 440.35#W/2
+	v0 = 229.73#H/2
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
 
 	angle = 0;#-np.pi/4
