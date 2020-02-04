@@ -2,6 +2,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import math
 import numpy as np
+from primitives import *
 
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
 def init_background_texture(H, W):
@@ -35,7 +36,7 @@ def clear(image, H, W, y, x, textID):
 	glLoadIdentity()
 	gluOrtho2D(0, W, H, 0)
 	glMatrixMode(GL_MODELVIEW)
-	
+	#glLoadIdentity()
 	#/4
 	glBegin(GL_QUADS)
 	glTexCoord2f(0, 0)
@@ -47,3 +48,91 @@ def clear(image, H, W, y, x, textID):
 	glTexCoord2f(0, y)
 	glVertex2f(0, H)
 	glEnd()
+
+def set_projection_from_camera(K, H, W):
+	"""  Set view from a camera calibration matrix. """
+
+	glMatrixMode(GL_PROJECTION)
+	glLoadIdentity()
+
+	fx = K[0,0]
+	fy = K[1,1]
+	fovy = 2*np.arctan(0.5*H/fy)*180/np.pi
+	aspect = (W*fy)/(H*fx)
+	# print('fovy '+ str(fovy))
+	# print('aspect '+ str(aspect))
+	# define the near and far clipping planes
+	near = 0.1
+	far = 100.0
+	
+	# set perspective
+	gluPerspective(fovy,aspect,near,far)
+	glViewport(0,0,W,H)
+
+# def set_modelview_from_camera(cTw):
+	## """  Set the model view matrix from camera pose. """
+	# Rt = cTw[:-1, :]
+
+	##rotate teapot 90 deg around x-axis so that z-axis is up
+	# Rx = np.array([[1,0,0],[0,0,-1],[0,1,0]])
+
+	##set rotation to best approximation
+	# R = Rt[:,:3]
+	# U,S,V = np.linalg.svd(R)
+	# R = np.dot(U,V)
+	# R[0,:] = -R[0,:] # change sign of x-axis
+	
+	##set translation
+	# t = np.squeeze(Rt[:,3])
+
+	##setup 4*4 model view matrix
+	# M = np.eye(4)
+	# M[:3,:3] = np.dot(R,Rx)
+	# M[:3,3] = t
+	
+	# print('M')
+	# print(M)
+	##transpose and flatten to get column order
+	# M = M.T
+	# m = M.flatten() 
+
+	##replace model view with the new matrix
+	# glMatrixMode(GL_MODELVIEW)
+	# glLoadIdentity()
+	# glLoadMatrixf(m)
+
+def set_modelview_from_camera(cTw):
+	"""  Set the model view matrix from camera pose. """
+	
+	cv_to_gl = np.eye(4)
+	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
+	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
+	viewMatrix = np.dot(cv_to_gl, cTw)
+	viewMatrix[0,3] *= 0.01
+	viewMatrix[1,3] *= 0.01
+	viewMatrix[2,3] *= 0.01
+	#print(viewMatrix)
+	viewMatrix = viewMatrix.T
+	viewMatrix = viewMatrix.flatten() 
+
+	# replace model view with the new matrix
+	glMatrixMode(GL_MODELVIEW)
+	glLoadIdentity()
+	glLoadMatrixf(viewMatrix)
+  
+def render_cube(cTw, K, H,W,t):
+	glEnable(GL_DEPTH_TEST)
+	glBindTexture(GL_TEXTURE_2D, 0) 
+	
+	set_projection_from_camera(K, H, W)
+	set_modelview_from_camera(cTw)
+	
+	glEnable(GL_BLEND)
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+	Cube(t)
+	
+	glLoadIdentity()
+	glDisable(GL_BLEND)
+
+	glColor(255.0, 255.0, 255.0, 255.0)
