@@ -1,7 +1,7 @@
 FROM python:3.7
 
 RUN apt-get update && \
-	apt-get install -y build-essential cmake git wget unzip yasm pkg-config libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libavformat-dev libpq-dev python3-pip libsm6 libxext6 libxrender-dev libopenexr-dev zlib1g-dev g++ python-opengl libosmesa6 && \
+	apt-get install -y build-essential cmake git wget unzip yasm pkg-config libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libavformat-dev libpq-dev python3-pip libsm6 libxext6 libxrender-dev libopenexr-dev zlib1g-dev g++ python-opengl libosmesa6 libgtk2.0-dev && \
 	rm -rf /var/lib/apt/lists/*
 
 ADD requirements.txt /
