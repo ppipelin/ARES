@@ -1,8 +1,10 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
+import OpenGL.GLUT as GLUT
 import math
 import numpy as np
 from primitives import *
+from model import *
 
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
 def init_background_texture(H, W):
@@ -108,10 +110,10 @@ def set_modelview_from_camera(cTw):
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
 	viewMatrix = np.dot(cv_to_gl, cTw)
-	viewMatrix[0,3] *= 0.01
-	viewMatrix[1,3] *= 0.01
-	viewMatrix[2,3] *= 0.01
-	#print(viewMatrix)
+	viewMatrix[0,3] *= 0.01 # cm to m
+	viewMatrix[1,3] *= 0.01 # cm to m
+	viewMatrix[2,3] *= 0.01 # cm to m
+
 	viewMatrix = viewMatrix.T
 	viewMatrix = viewMatrix.flatten() 
 
@@ -129,8 +131,38 @@ def render_cube(cTw, K, H,W,t):
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
+	glEnable(GL_CULL_FACE)
+	glCullFace(GL_FRONT)
 	Cube(t)
+	glDisable(GL_CULL_FACE)
+	
+	glLoadIdentity()
+	glDisable(GL_BLEND)
+
+	glColor(255.0, 255.0, 255.0, 255.0)
+
+def render_model(model, cTw, K, H,W,t):
+	glEnable(GL_DEPTH_TEST)
+	glBindTexture(GL_TEXTURE_2D, 0) 
+	
+	set_projection_from_camera(K, H, W)
+	set_modelview_from_camera(cTw)
+	
+	glEnable(GL_BLEND)
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+	glEnable(GL_CULL_FACE)
+	glCullFace(GL_FRONT)
+	glScale(0.1,0.1,0.1)
+	glRotate(-90,1,0,0)
+	#glEnable(GL_LIGHTING)
+	#glEnable(GL_LIGHT0)
+	#glLightfv( GL_LIGHT0, GL_POSITION, (0,0,10,1) )
+	glMaterialfv(GL_FRONT,GL_AMBIENT,[0,0,0,0])
+	glMaterialfv(GL_FRONT,GL_DIFFUSE,[0.5,0.0,0.0,0.0])
+	glMaterialfv(GL_FRONT,GL_SPECULAR,[0.7,0.6,0.6,0.0])
+	glMaterialf(GL_FRONT,GL_SHININESS,0.25*128.0)
+	model.render()
+	glDisable(GL_CULL_FACE)
 	
 	glLoadIdentity()
 	glDisable(GL_BLEND)
