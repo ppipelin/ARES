@@ -25,9 +25,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	[N, H, W, C] =  video.shape
 	
 	# """"""precisely estimated calibration"""""""""
-	F = 270
-	u0 = 440.35#W/2
-	v0 = 229.73#H/2
+	F = 800#270
+	u0 = W/2#440.35
+	v0 = H/2#229.73#
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
 
 	angle = 0;#-np.pi/4
@@ -83,7 +83,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 
 	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
-	min_match = 15; #render anything only if nb_matches > min_match
+	min_matches = 15 #render anything only if nb_matches > min_match
 	
 	print('Ready')
 	while True:
@@ -93,21 +93,26 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 		clear(frame, H, W, y, x, textID)
 		
 		# 1/ Do the pose estimation
-		
+		beg = time.time()
 		kp_frame, des_frame = detector.detectAndCompute(gray, None)
+		print("detection/description time : "+str(-beg + time.time()))
+		beg = time.time()
 		matches = matcher.match(des_marker, des_frame)
+		print("matching              time : "+str(-beg + time.time()))
 		#matches = matches_ratio_test(matcher, des_marker, des_frame, 0.75)
-		#print(len(matches))
+		
 		
 		matches = sorted(matches, key=lambda x: x.distance)
-		
-		if len(matches) > min_match:
+		print("matches : " + str(len(matches)))
+		if len(matches) > min_matches:
 			#cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
 			#cap = cv2.drawMatches(marker, kp_marker, frame, kp_frame, matches[:min_match], 0, flags=2)
 			#cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
 			src_pts = np.float32([kp_marker[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
 			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+			beg = time.time()
 			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+			print("estimating homography time : "+str(-beg + time.time()))
 			#Homography = -Homography
 			# print('Homography')
 			# print(Homography)
