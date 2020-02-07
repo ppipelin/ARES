@@ -6,6 +6,69 @@ import numpy as np
 from primitives import *
 from model import *
 
+SP = {}
+
+
+def init_shaders(shader_folder):
+	global SP
+	vert_filepath = shader_folder + 'shader_vert.glsl'
+	frag_filepath = shader_folder + 'shader_frag.glsl'
+	vert_code = open(vert_filepath, 'r').read()
+	frag_code = open(frag_filepath, 'r').read()
+
+	vert_ID = glCreateShader(GL_VERTEX_SHADER)
+	glShaderSource(vert_ID, vert_code)
+	glCompileShader(vert_ID)
+	if not glGetShaderiv(vert_ID, GL_COMPILE_STATUS):
+		raise Exception('Failed to compile the vertex shader!')
+
+	frag_ID = glCreateShader(GL_FRAGMENT_SHADER)
+	glShaderSource(frag_ID, frag_code)
+	glCompileShader(frag_ID)
+	if not glGetShaderiv(frag_ID, GL_COMPILE_STATUS):
+		raise Exception('Failed to compile the fragment shader!')
+
+	program_ID = glCreateProgram()
+	glAttachShader(program_ID, vert_ID)
+	glAttachShader(program_ID, frag_ID)
+	glLinkProgram(program_ID)
+
+	if not glGetProgramiv(program_ID, GL_LINK_STATUS):
+		raise Exception('Failed to link the shader program!')
+
+	SP = {
+		'vert_ID': vert_ID, 
+		'frag_ID': frag_ID, 
+		'PID': program_ID,
+		}
+
+	addAttribute('in_position')
+	addAttribute('in_normal')
+
+	addUniform('uni_mat_view')
+	addUniform('uni_mat_projection')
+	addUniform('uni_lightPosition')
+	addUniform('uni_lightColor')
+	addUniform('uni_diffuseColor')
+	
+	print('shader program: ', SP)
+	print('init shader: done!')
+
+
+def addAttribute(attrib_name):
+	global SP
+	SP[attrib_name+'_ID'] = glGetAttribLocation(SP['PID'], attrib_name)
+	if SP[attrib_name+'_ID'] == -1:
+		raise Exception('Failed to get the ID of the Attribute "'+attrib_name+'"')
+	return SP[attrib_name+'_ID']
+
+def addUniform(uni_name):
+	global SP
+	SP[uni_name+'_ID'] = glGetUniformLocation(SP['PID'], uni_name)
+	if SP[uni_name+'_ID'] == -1:
+		raise Exception('Failed to get the ID of the Uniform "'+uni_name+'"')
+	return SP[uni_name+'_ID']
+
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
 def init_background_texture(H, W):
 

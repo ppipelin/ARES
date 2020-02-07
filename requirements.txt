@@ -3,6 +3,7 @@ opencv-contrib-python
 numpy
 pygame
 PyOpenGL
+glfw
 argparse
 imutils
 pillow
