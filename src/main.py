@@ -1,5 +1,5 @@
-import cv2 
-
+import cv2
+import argparse
 import pygame
 import numpy as np
 from pygame.locals import *
@@ -17,9 +17,9 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main():
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	
-	video_path = 'data/video_plateau.mp4'
+	video_path = data_folder + 'video_plateau.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
@@ -55,15 +55,19 @@ def main():
 
 	
 	print('Detector creation and feature detection on model...')
-	detector = cv2.xfeatures2d.SURF_create()
-	#detector = cv2.xfeatures2d.SIFT_create()
-	#detector= cv2.ORB_create(250)
-	detector.setHessianThreshold(2500) #uncomment when using SURF
-	#detector.setUpright(True)
+	detector = cv2.xfeatures2d.SURF_create() if descriptor_choice == 'surf' else cv2.xfeatures2d.SIFT_create() if descriptor_choice == 'sift' else cv2.ORB_create(int(opt.extra_desc_param)) if descriptor_choice == 'orb' else None
+	
+	if detector is None:
+		raise Exception("The provided descriptor_choice (" + descriptor_choice + ") is not valid")
+	print("detector", type(detector))
+
+	if descriptor_choice == 'surf':
+		detector.setHessianThreshold(int(opt.extra_desc_param))
 	
 	marker = cv2.imread('data/plateau.png')
 	H_marker, W_marker, C_marker = marker.shape
 	marker = cv2.cvtColor(marker,cv2.COLOR_BGR2GRAY)
+	
 	
 	kp_marker, des_marker = detector.detectAndCompute(marker, None)
 	print('Keypoints/Descriptors : '+str(len(kp_marker)))
@@ -72,8 +76,12 @@ def main():
 	cv2.imshow('marker', marker)
 	#cv2.waitKey(0)
 	flann_params = dict(algorithm = 6, table_number = 6, key_size = 12, multi_probe_level = 1)
-	#matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) # uncomment when using ORB
-	matcher = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True) # uncomment when using SIFT or SURF
+	
+	matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True) if descriptor_choice == 'orb' else cv2.BFMatcher(cv2.NORM_L1, crossCheck=True) if descriptor_choice == 'sift' or descriptor_choice == 'surf' else None
+	if matcher is None:
+		raise Exception("The provided descriptor_choice (" + descriptor_choice + ") is not valid")
+
+	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_match = 15; #render anything only if nb_matches > min_match
 	
@@ -206,4 +214,21 @@ def compute_cTci(K,homography):
 	# print(cTci)
 	return cTci
 
-main()
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-d", "--data_folder", type=str, required=False, default="data/")
+	parser.add_argument("-desc", "--descriptor", type=str, required=False, choices=['sift', 'surf', 'orb'], default='surf')
+	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500)
+	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
+	parser.set_defaults(do_calibration=False)
+	opt = parser.parse_args()
+	
+	print("#" * 100)
+	print("Launching main.py with the following parameters : ")
+	print("data_folder			", opt.data_folder)
+	print("descriptor			", opt.descriptor)
+	print("extra_desc_param		", opt.extra_desc_param)
+	print("do_calibration			", opt.do_calibration)
+	print("#" * 100)
+
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration)
