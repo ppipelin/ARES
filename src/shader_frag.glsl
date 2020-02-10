@@ -25,5 +25,5 @@ void main()
 {
     out_fragColor = vec4(color(), 1.0);
     out_fragColor = vec4(1, 0, 0, 1);
-    out_fragColor = vec4(direction_to_color(var_normal), 0.5);
+    out_fragColor = vec4(direction_to_color(var_normal), 0.75);
 }

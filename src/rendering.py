@@ -170,6 +170,16 @@ def set_projection_from_camera(K, H, W):
 	# glLoadIdentity()
 	# glLoadMatrixf(m)
 
+def nparray_to_glm_mat(array):
+	res = glm.mat4()
+	for i in range(4):
+		for j in range(4):
+			tmp = array[i, j]
+			res[i][j] = tmp
+	return res
+	
+	
+
 def set_modelview_from_camera(cTw):
 	"""  Set the model view matrix from camera pose. """
 	if SP['uni_mat_view_ID'] == -1:
@@ -183,10 +193,15 @@ def set_modelview_from_camera(cTw):
 	viewMatrix[2,3] *= 0.01 # cm to m
 
 	viewMatrix = viewMatrix.T
-	viewMatrix = viewMatrix.flatten() 
+
+	M = nparray_to_glm_mat(viewMatrix)
+	scale = 0.5
+	scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
+	rotateM = glm.rotate(glm.mat4(), -math.pi/2.0, glm.vec3(1, 0, 0))
+	M = M * scaleM * rotateM
 
 	# replace model view with the new matrix
-	glUniformMatrix4fv(SP['uni_mat_view_ID'], 1, False, viewMatrix)
+	glUniformMatrix4fv(SP['uni_mat_view_ID'], 1, False, glm.value_ptr(M))
   
 def render_cube(cTw, K, H,W,t):
 	glUseProgram(SP['PID'])
@@ -198,10 +213,10 @@ def render_cube(cTw, K, H,W,t):
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-	glEnable(GL_CULL_FACE)
-	glCullFace(GL_FRONT)
+	#glEnable(GL_CULL_FACE)
+	#glCullFace(GL_BACK)
 	Cube(t)
-	glDisable(GL_CULL_FACE)
+	#glDisable(GL_CULL_FACE)
 	
 	glLoadIdentity()
 	glDisable(GL_BLEND)
@@ -218,12 +233,12 @@ def render_model(model, cTw, K, H,W,t):
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-	glEnable(GL_CULL_FACE)
-	glCullFace(GL_FRONT)
+	# glEnable(GL_CULL_FACE)
+	# glCullFace(GL_FRONT)
 	# glScale(0.1,0.1,0.1)
 	# glRotate(-90,1,0,0)
 	model.render(SP)
-	glDisable(GL_CULL_FACE)
+	#glDisable(GL_CULL_FACE)
 	
 	# glLoadIdentity()
 	glDisable(GL_BLEND)

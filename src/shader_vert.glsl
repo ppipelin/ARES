@@ -20,5 +20,5 @@ void main()
     gl_Position = uni_mat_projection * uni_mat_view * vec4(in_position, 1.0);
     vec4 position = uni_mat_view * vec4(in_position, 1.0);
     var_position = position.xyz / position.www; // Passage coordonnées homogenes -> cartesiennes
-    var_normal = normalMatrix(uni_mat_view)*in_normal;
+    var_normal = normalize(normalMatrix(uni_mat_view)*in_normal);
 }
