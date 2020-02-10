@@ -4,11 +4,9 @@ RUN apt-get update && \
 	apt-get install -y build-essential cmake git wget unzip yasm pkg-config libswscale-dev libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libavformat-dev libpq-dev python3-pip libsm6 libxext6 libxrender-dev libopenexr-dev zlib1g-dev g++ python-opengl libosmesa6 libgtk2.0-dev && \
 	rm -rf /var/lib/apt/lists/*
 
-ADD requirements.txt /
-
-RUN pip3 install -r requirements.txt
-
 ENV PYOPENGL_PLATFORM=osmesax
+
+RUN pip3 install numpy
 
 ENV OPENCV_VERSION="4.2.0"
 
@@ -46,3 +44,7 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 RUN ln -s \
   /usr/local/python/cv2/python-3.7/cv2.cpython-37m-x86_64-linux-gnu.so \
   /usr/local/lib/python3.7/site-packages/cv2.so
+
+ADD requirements.txt /
+
+RUN pip3 install -r requirements.txt
