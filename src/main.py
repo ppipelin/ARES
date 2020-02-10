@@ -17,7 +17,7 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder):
 	
 	video_path = data_folder + 'video_plateau.mp4'
 	print('loading video from path : ' +  video_path +'...')	
@@ -41,6 +41,8 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration):
 	pygame.display.set_caption('ARES')
 	window = pygame.display.set_mode((W,H), DOUBLEBUF | OPENGL)
 	
+	init_shaders(shader_folder)
+
 	FPS = 30.0
 	TPF = 1.0/FPS
 	n = 90
@@ -225,6 +227,7 @@ if __name__ == "__main__":
 	parser.add_argument("-desc", "--descriptor", type=str, required=False, choices=['sift', 'surf', 'orb'], default='surf')
 	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500)
 	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
+	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/')
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
 	
@@ -236,4 +239,4 @@ if __name__ == "__main__":
 	print("do_calibration			", opt.do_calibration)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder)
