@@ -17,6 +17,12 @@ class Model:
         self.texture = 0
         self.texture_offset = 0
 
+        self.in_position_ID = 0
+        self.in_normal_ID = 0
+        self.uni_mat_view_ID = 0
+        self.uni_mat_projection_ID = 0
+
+
 
     def render(self):
         glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
