@@ -14,8 +14,16 @@ vec3 color()
     vec3 lightDirection = normalize(uni_lightPosition-var_position);
     return max(dot(lightDirection,normalize(var_normal)), 0.0)*uni_lightColor*uni_diffuseColor;
 }
+
+vec3 direction_to_color(vec3 dir)
+{
+    return abs(dir);
+}
+
 // Programme principal
 void main()
 {
     out_fragColor = vec4(color(), 1.0);
+    out_fragColor = vec4(1, 0, 0, 1);
+    out_fragColor = vec4(direction_to_color(var_normal), 0.5);
 }

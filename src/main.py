@@ -86,7 +86,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_match = 15; #render anything only if nb_matches > min_match
-	
+
 	print('Ready')
 	while True:
 		begin_t = time.time()

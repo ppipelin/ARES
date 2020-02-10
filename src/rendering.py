@@ -5,6 +5,7 @@ import math
 import numpy as np
 from primitives import *
 from model import *
+import glm
 
 SP = {}
 
@@ -59,14 +60,14 @@ def addAttribute(attrib_name):
 	global SP
 	SP[attrib_name+'_ID'] = glGetAttribLocation(SP['PID'], attrib_name)
 	if SP[attrib_name+'_ID'] == -1:
-		raise Exception('Failed to get the ID of the Attribute "'+attrib_name+'"')
+		print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'"'))
 	return SP[attrib_name+'_ID']
 
 def addUniform(uni_name):
 	global SP
 	SP[uni_name+'_ID'] = glGetUniformLocation(SP['PID'], uni_name)
 	if SP[uni_name+'_ID'] == -1:
-		raise Exception('Failed to get the ID of the Uniform "'+uni_name+'"')
+		print(Warning('Failed to get the ID of the Uniform "'+uni_name+'"'))
 	return SP[uni_name+'_ID']
 
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
@@ -88,7 +89,7 @@ def init_background_texture(H, W):
 # => sets the background with the given image
 def clear(image, H, W, y, x, textID):
 	#/1
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glDisable(GL_DEPTH_TEST)
 
 	#/2
@@ -116,7 +117,8 @@ def clear(image, H, W, y, x, textID):
 
 def set_projection_from_camera(K, H, W):
 	"""  Set view from a camera calibration matrix. """
-
+	if SP['uni_mat_projection_ID'] == -1:
+		return
 	glMatrixMode(GL_PROJECTION)
 	glLoadIdentity()
 
@@ -131,7 +133,9 @@ def set_projection_from_camera(K, H, W):
 	far = 100.0
 	
 	# set perspective
-	gluPerspective(fovy,aspect,near,far)
+	mP = glm.perspective(fovy, aspect, near, far)
+	glUniformMatrix4fv(SP['uni_mat_projection_ID'], 1, False, glm.value_ptr(mP))
+
 	glViewport(0,0,W,H)
 
 # def set_modelview_from_camera(cTw):
@@ -168,7 +172,8 @@ def set_projection_from_camera(K, H, W):
 
 def set_modelview_from_camera(cTw):
 	"""  Set the model view matrix from camera pose. """
-	
+	if SP['uni_mat_view_ID'] == -1:
+		return
 	cv_to_gl = np.eye(4)
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
@@ -181,11 +186,10 @@ def set_modelview_from_camera(cTw):
 	viewMatrix = viewMatrix.flatten() 
 
 	# replace model view with the new matrix
-	glMatrixMode(GL_MODELVIEW)
-	glLoadIdentity()
-	glLoadMatrixf(viewMatrix)
+	glUniformMatrix4fv(SP['uni_mat_view_ID'], 1, False, viewMatrix)
   
 def render_cube(cTw, K, H,W,t):
+	glUseProgram(SP['PID'])
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	
@@ -205,6 +209,7 @@ def render_cube(cTw, K, H,W,t):
 	glColor(255.0, 255.0, 255.0, 255.0)
 
 def render_model(model, cTw, K, H,W,t):
+	glUseProgram(SP['PID'])
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	
@@ -215,19 +220,13 @@ def render_model(model, cTw, K, H,W,t):
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 	glEnable(GL_CULL_FACE)
 	glCullFace(GL_FRONT)
-	glScale(0.1,0.1,0.1)
-	glRotate(-90,1,0,0)
-	#glEnable(GL_LIGHTING)
-	#glEnable(GL_LIGHT0)
-	#glLightfv( GL_LIGHT0, GL_POSITION, (0,0,10,1) )
-	glMaterialfv(GL_FRONT,GL_AMBIENT,[0,0,0,0])
-	glMaterialfv(GL_FRONT,GL_DIFFUSE,[0.5,0.0,0.0,0.0])
-	glMaterialfv(GL_FRONT,GL_SPECULAR,[0.7,0.6,0.6,0.0])
-	glMaterialf(GL_FRONT,GL_SHININESS,0.25*128.0)
-	model.render()
+	# glScale(0.1,0.1,0.1)
+	# glRotate(-90,1,0,0)
+	model.render(SP)
 	glDisable(GL_CULL_FACE)
 	
-	glLoadIdentity()
+	# glLoadIdentity()
 	glDisable(GL_BLEND)
 
 	glColor(255.0, 255.0, 255.0, 255.0)
+	glUseProgram(0)

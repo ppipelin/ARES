@@ -16,21 +16,23 @@ class Model:
         self.model = []
         self.texture = 0
         self.texture_offset = 0
-
-        self.in_position_ID = 0
-        self.in_normal_ID = 0
-        self.uni_mat_view_ID = 0
-        self.uni_mat_projection_ID = 0
+        self.normal_offset = 0
 
 
 
-    def render(self):
+    def render(self, SP):
         glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, self.model.itemsize * 3, ctypes.c_void_p(0))
-        glEnableVertexAttribArray(0)
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, self.model.itemsize * 2, ctypes.c_void_p(self.texture_offset))
-        glEnableVertexAttribArray(1)
-        if self.textured:
+        # positions
+        in_position_ID = SP['in_position_ID']
+        if in_position_ID != -1:
+            glVertexAttribPointer(in_position_ID, 3, GL_FLOAT, GL_FALSE, self.model.itemsize * 3, ctypes.c_void_p(0))
+            glEnableVertexAttribArray(in_position_ID)
+        # normals
+        in_normal_ID = SP['in_normal_ID']
+        if in_normal_ID != -1:
+            glVertexAttribPointer(in_normal_ID, 3, GL_FLOAT, GL_FALSE, self.model.itemsize * 3, ctypes.c_void_p(self.normal_offset))
+            glEnableVertexAttribArray(in_normal_ID)
+        if False and self.textured:
             glBindTexture(GL_TEXTURE_2D, self.texture)
             glEnable(GL_TEXTURE_2D)
         glDrawArrays(GL_TRIANGLES, 0, len(self.vertex_index))
@@ -71,11 +73,14 @@ class Model:
         for i in self.vertex_index:
             self.model.extend(self.vert_coords[i])
 
-        for i in self.texture_index:
-            self.model.extend(self.text_coords[i])
+        #for i in self.texture_index:
+        #    self.model.extend(self.text_coords[i])
 
         for i in self.normal_index:
             self.model.extend(self.norm_coords[i])
+
+        # 3 because vec3 and 4 because float
+        self.normal_offset = len(self.vertex_index) * 3 * 4
 
         self.model = np.array(self.model, dtype='float32')
 
@@ -85,7 +90,7 @@ class Model:
         glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
         glBufferData(GL_ARRAY_BUFFER, self.model.itemsize * len(self.model), self.model, GL_STATIC_DRAW)
         
-        if self.textured:
+        if False and self.textured:
             # Texture
             image = Image.open(tex_file)   
             flipped_image = image.transpose(Image.FLIP_TOP_BOTTOM)
