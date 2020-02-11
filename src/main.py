@@ -154,7 +154,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		time.sleep(max(0,TPF - delta))
 		
 		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
+			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+				switch_shader_type()		
+			elif event.type == pygame.QUIT:
 				pygame.display.quit()
 				pygame.quit()
 				exit()

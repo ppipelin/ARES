@@ -8,7 +8,7 @@ layout (location = 0) out vec4 out_fragColor;
 
 uniform vec3 uni_WlightDirection; 
 uniform vec3 uni_lightColor; 
-
+// 0 -> fresnel / 1 -> phong
 uniform uint uni_mode;
 
 uniform vec3 uni_diffuse; 
@@ -45,7 +45,7 @@ void phong()
 
 void main()
 {
-    if(uni_mode != 0u)
+    if(uni_mode == 0u)
     {
         fresnell_normal();
     }

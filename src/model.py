@@ -23,7 +23,7 @@ class Model:
 
 
     def render(self, SP):
-        scale = 0.5
+        scale = 1
         scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
         rotateM = glm.rotate(glm.mat4(), -math.pi/2.0, glm.vec3(1, 0, 0))
         M = scaleM * rotateM

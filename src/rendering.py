@@ -74,6 +74,8 @@ def init_shaders(shader_folder):
 	glUniform3f(SP['uni_lightColor_ID'], 1, 1, 1)
 	glUniform3f(SP['uni_WlightDirection_ID'], 0, 0, 1)
 	glUniform3f(SP['uni_diffuse_ID'], 1, 1, 1)
+	glUniform1ui(SP['uni_mode_ID'], 0)
+	SP['uni_mode'] = 0
 	glUseProgram(0)
 
 
@@ -102,7 +104,11 @@ def init_background_texture(H, W):
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER , GL_NEAREST)
 	return [textID, H/Hpow2, W/Wpow2]
 
-
+def switch_shader_type():
+	SP['uni_mode'] = 1 - SP['uni_mode']
+	glUseProgram(SP['PID'])
+	glUniform1ui(SP['uni_mode_ID'], SP['uni_mode'])
+	glUseProgram(0)
 # 1/ Clears the buffers (color and depth) and DEACTIVATES depth tests (need to reactivate later!!)
 # 2/ Binds the texture and blit the given image to it
 # 3/ Sets a orthogrphic projection over the area W/H
