@@ -1,21 +1,56 @@
 #version 330
-// Declaration des varyings
-in vec3 var_position;
-in vec3 var_normal;
-// La sortie correspondant à la couleur du fragment
+
+in vec3 var_Wposition;
+in vec3 var_Wnormal;
+in vec2 var_uv;
+
 layout (location = 0) out vec4 out_fragColor;
-// Declaration des uniforms
-uniform vec3 uni_lightPosition; // Position de la lumiere en repere camera
-uniform vec3 uni_lightColor; // Couleur de la lumière
-uniform vec3 uni_diffuseColor; // Couleur diffuse du materiau
-// Calcule la couleur du fragment
-vec3 color()
+
+uniform vec3 uni_WlightDirection; 
+uniform vec3 uni_lightColor; 
+
+uniform uint uni_mode;
+
+uniform vec3 uni_diffuse; 
+uniform vec3 uni_glossy;
+uniform vec3 uni_ambiant;
+
+
+vec3 direction_to_color(vec3 dir)
 {
-    vec3 lightDirection = normalize(uni_lightPosition-var_position);
-    return max(dot(lightDirection,normalize(var_normal)), 0.0)*uni_lightColor*uni_diffuseColor;
+    return abs(dir);
 }
-// Programme principal
+
+void fresnell_normal()
+{
+    vec3 Wnormal = normalize(var_Wnormal);
+    float alpha = 0.5;//abs(dot(Wnormal, normalize(var_Cposition))); // TODO
+    alpha = 1.0 - alpha;
+    out_fragColor = vec4(direction_to_color(Wnormal), alpha);
+}
+
+void phong()
+{
+    float alpha = 1;
+    vec3 res = vec3(0);
+    res += uni_ambiant;
+
+    vec3 wNormal = normalize(var_Wnormal);
+    vec3 Wto_light = -uni_WlightDirection;
+
+    res += uni_diffuse * max(0, dot(wNormal, Wto_light));
+
+    out_fragColor = vec4(res, alpha);
+}
+
 void main()
 {
-    out_fragColor = vec4(color(), 1.0);
+    if(uni_mode != 0u)
+    {
+        fresnell_normal();
+    }
+    else
+    {
+        phong();
+    }
 }

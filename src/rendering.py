@@ -5,6 +5,7 @@ import math
 import numpy as np
 from primitives import *
 from model import *
+import glm
 
 SP = {}
 
@@ -20,13 +21,17 @@ def init_shaders(shader_folder):
 	glShaderSource(vert_ID, vert_code)
 	glCompileShader(vert_ID)
 	if not glGetShaderiv(vert_ID, GL_COMPILE_STATUS):
-		raise Exception('Failed to compile the vertex shader!')
+		error = glGetShaderInfoLog(vert_ID)
+		print(error)
+		raise Exception('Failed to compile the vertex shader!', error)
 
 	frag_ID = glCreateShader(GL_FRAGMENT_SHADER)
 	glShaderSource(frag_ID, frag_code)
 	glCompileShader(frag_ID)
 	if not glGetShaderiv(frag_ID, GL_COMPILE_STATUS):
-		raise Exception('Failed to compile the fragment shader!')
+		error = glGetShaderInfoLog(frag_ID)
+		print(error)
+		raise Exception('Failed to compile the fragment shader!', error)
 
 	program_ID = glCreateProgram()
 	glAttachShader(program_ID, vert_ID)
@@ -34,7 +39,9 @@ def init_shaders(shader_folder):
 	glLinkProgram(program_ID)
 
 	if not glGetProgramiv(program_ID, GL_LINK_STATUS):
-		raise Exception('Failed to link the shader program!')
+		error = glGetProgramInfoLog(program_ID)
+		print(error)
+		raise Exception('Failed to link the shader program!', error)
 
 	SP = {
 		'vert_ID': vert_ID, 
@@ -44,29 +51,44 @@ def init_shaders(shader_folder):
 
 	addAttribute('in_position')
 	addAttribute('in_normal')
+	addAttribute('in_uv')
 
-	addUniform('uni_mat_view')
-	addUniform('uni_mat_projection')
-	addUniform('uni_lightPosition')
+	addUniform('uni_mat_V')
+	addUniform('uni_mat_P')
+	addUniform('uni_mat_M')
+
+	addUniform('uni_WlightDirection')
 	addUniform('uni_lightColor')
-	addUniform('uni_diffuseColor')
+
+	addUniform('uni_mode')
+
+	addUniform('uni_diffuse')
+	addUniform('uni_glossy')
+	addUniform('uni_ambiant')
 	
 	print('shader program: ', SP)
 	print('init shader: done!')
+
+	glUseProgram(program_ID)
+	glUniform3f(SP['uni_ambiant_ID'], 0.2, 0.2, 0.2)
+	glUniform3f(SP['uni_lightColor_ID'], 1, 1, 1)
+	glUniform3f(SP['uni_WlightDirection_ID'], 0, 0, 1)
+	glUniform3f(SP['uni_diffuse_ID'], 1, 1, 1)
+	glUseProgram(0)
 
 
 def addAttribute(attrib_name):
 	global SP
 	SP[attrib_name+'_ID'] = glGetAttribLocation(SP['PID'], attrib_name)
 	if SP[attrib_name+'_ID'] == -1:
-		raise Exception('Failed to get the ID of the Attribute "'+attrib_name+'"')
+		print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'"'))
 	return SP[attrib_name+'_ID']
 
 def addUniform(uni_name):
 	global SP
 	SP[uni_name+'_ID'] = glGetUniformLocation(SP['PID'], uni_name)
 	if SP[uni_name+'_ID'] == -1:
-		raise Exception('Failed to get the ID of the Uniform "'+uni_name+'"')
+		print(Warning('Failed to get the ID of the Uniform "'+uni_name+'"'))
 	return SP[uni_name+'_ID']
 
 # Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
@@ -88,7 +110,7 @@ def init_background_texture(H, W):
 # => sets the background with the given image
 def clear(image, H, W, y, x, textID):
 	#/1
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 	glDisable(GL_DEPTH_TEST)
 
 	#/2
@@ -116,7 +138,7 @@ def clear(image, H, W, y, x, textID):
 
 def set_projection_from_camera(K, H, W):
 	"""  Set view from a camera calibration matrix. """
-
+	assert(SP['uni_mat_P_ID'] != -1)
 	glMatrixMode(GL_PROJECTION)
 	glLoadIdentity()
 
@@ -131,7 +153,9 @@ def set_projection_from_camera(K, H, W):
 	far = 100.0
 	
 	# set perspective
-	gluPerspective(fovy,aspect,near,far)
+	mP = glm.perspective(fovy, aspect, near, far)
+	glUniformMatrix4fv(SP['uni_mat_P_ID'], 1, False, glm.value_ptr(mP))
+
 	glViewport(0,0,W,H)
 
 # def set_modelview_from_camera(cTw):
@@ -166,9 +190,20 @@ def set_projection_from_camera(K, H, W):
 	# glLoadIdentity()
 	# glLoadMatrixf(m)
 
+def nparray_to_glm_mat(array):
+	res = glm.mat4()
+	for i in range(4):
+		for j in range(4):
+			tmp = array[i, j]
+			res[i][j] = tmp
+	return res
+	
+	
+
 def set_modelview_from_camera(cTw):
 	"""  Set the model view matrix from camera pose. """
-	
+	assert(SP['uni_mat_V_ID'] != -1)
+
 	cv_to_gl = np.eye(4)
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
@@ -178,14 +213,15 @@ def set_modelview_from_camera(cTw):
 	# viewMatrix[2,3] *= 0.01 # cm to m
 
 	viewMatrix = viewMatrix.T
-	viewMatrix = viewMatrix.flatten() 
+
+	V = nparray_to_glm_mat(viewMatrix)
 
 	# replace model view with the new matrix
-	glMatrixMode(GL_MODELVIEW)
-	glLoadIdentity()
-	glLoadMatrixf(viewMatrix)
+	glUniformMatrix4fv(SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
+	
   
 def render_cube(cTw, K, H,W,t):
+	glUseProgram(SP['PID'])
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	
@@ -194,10 +230,10 @@ def render_cube(cTw, K, H,W,t):
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-	glEnable(GL_CULL_FACE)
-	glCullFace(GL_FRONT)
+	#glEnable(GL_CULL_FACE)
+	#glCullFace(GL_BACK)
 	Cube(t)
-	glDisable(GL_CULL_FACE)
+	#glDisable(GL_CULL_FACE)
 	
 	glLoadIdentity()
 	glDisable(GL_BLEND)
@@ -205,6 +241,7 @@ def render_cube(cTw, K, H,W,t):
 	glColor(255.0, 255.0, 255.0, 255.0)
 
 def render_model(model, cTw, K, H,W,t):
+	glUseProgram(SP['PID'])
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
 	
@@ -213,21 +250,15 @@ def render_model(model, cTw, K, H,W,t):
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-	glEnable(GL_CULL_FACE)
-	glCullFace(GL_FRONT)
-	glScale(0.1,0.1,0.1)
-	glRotate(-90,1,0,0)
-	#glEnable(GL_LIGHTING)
-	#glEnable(GL_LIGHT0)
-	#glLightfv( GL_LIGHT0, GL_POSITION, (0,0,10,1) )
-	glMaterialfv(GL_FRONT,GL_AMBIENT,[0,0,0,0])
-	glMaterialfv(GL_FRONT,GL_DIFFUSE,[0.5,0.0,0.0,0.0])
-	glMaterialfv(GL_FRONT,GL_SPECULAR,[0.7,0.6,0.6,0.0])
-	glMaterialf(GL_FRONT,GL_SHININESS,0.25*128.0)
-	model.render()
-	glDisable(GL_CULL_FACE)
+	# glEnable(GL_CULL_FACE)
+	# glCullFace(GL_FRONT)
+	# glScale(0.1,0.1,0.1)
+	# glRotate(-90,1,0,0)
+	model.render(SP)
+	#glDisable(GL_CULL_FACE)
 	
-	glLoadIdentity()
+	# glLoadIdentity()
 	glDisable(GL_BLEND)
 
 	glColor(255.0, 255.0, 255.0, 255.0)
+	glUseProgram(0)

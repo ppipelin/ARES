@@ -17,15 +17,18 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save):
 	
 	video_path = data_folder + 'video_book.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
-	
+	# N = N//16
+	if(save is not 'nosave'):
+		video_to_save = np.empty((0, H, W, 3), dtype=np.uint8)
+
 	# """"""precisely estimated calibration"""""""""
-	F = 545*2#800#270
+	F = 545#800#270
 	u0 = W/2#440.35
 	v0 = H/2#229.73#
 	coords0 = np.array((u0,v0))
@@ -90,12 +93,12 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_matches = 15 #render anything only if nb_matches > min_match
 
-	iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
-	ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
-	cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
-	cap = cv2.drawMatches(marker, kp_marker, iframe, kp_iframe, imatches[:min_matches], 0, flags=2)
-	cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
-	cv2.waitKey(0)
+	# iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
+	# ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
+	# cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
+	# cap = cv2.drawMatches(marker, kp_marker, iframe, kp_iframe, imatches[:min_matches], 0, flags=2)
+	# cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
+	# cv2.waitKey(0)
 
 	print('Ready')
 	while True:
@@ -106,10 +109,12 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		frame = video[n,:,:,:]
 		clear(frame, H, W, y, x, textID)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
+		size_scale = 12.5/min(H_marker, W_marker) # the width of the target measures 12.5 cm => will be 12.5 unit wide
+		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
 
 		if ok_cTw:
-			render_cube(cTw, K, H, W, n * TPF)
+			#render_cube(cTw, K, H, W, n * TPF)
+			render_model(model,cTw, K, H, W, n * TPF)
 
 		# # 1/ Do the pose estimation
 		# beg = time.time()
@@ -168,6 +173,15 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		# 2/ Render an object
 		#=render_cube(H, W)
 		pygame.display.flip()
+
+		if(save is not 'nosave'):
+			string_image = pygame.image.tostring(window, 'RGB')
+			temp_surf = pygame.image.fromstring(string_image,(W, H),'RGB')
+			tmp_arr = pygame.surfarray.array3d(temp_surf)
+			tmp_arr = np.swapaxes(tmp_arr,0,1)
+			video_to_save = np.append(video_to_save, [tmp_arr], axis=0)
+			if((n + 1) % N is 0):
+				break
 		n = (n + 1) % N
 		end_t = time.time()
 		delta = end_t - begin_t
@@ -179,6 +193,14 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 				pygame.quit()
 				exit()
 	pygame.quit()
+	if(save is not 'nosave'):
+		if(save is None):
+			save_file = descriptor_choice + '.mp4'
+		else:
+			save_file = save
+		out = cv2.VideoWriter('results/'+str(save_file), cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 30, (W,H))
+		for i in range(video_to_save.shape[0]):
+			out.write(cv2.cvtColor(np.uint8(video_to_save[i]), cv2.COLOR_BGR2RGB))
 
 def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_marker, min_matches):
 	kp_firstframe, des_firstframe = detector.detectAndCompute(gray, None)
@@ -186,9 +208,9 @@ def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_m
 	matches = sorted(matches, key=lambda x: x.distance)
 	if len(matches) < min_matches:
 		return False, None, kp_firstframe, des_firstframe, matches
-	src_pts = np.float32([ np.array(kp_marker[m.queryIdx].pt + (0,))/size_marker for m in matches]).reshape(-1, 1, 3)
+	src_pts = np.float32([ np.array(kp_marker[m.queryIdx].pt + (0,))*size_marker for m in matches]).reshape(-1, 1, 3)
 	dst_pts = np.float32([kp_firstframe[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
-	retval, rvec, tvec, inliers	= cv2.solvePnPRansac(src_pts, dst_pts, K,  dist, None, None, False, 1000, 3.0)
+	retval, rvec, tvec, inliers	= cv2.solvePnPRansac(src_pts, dst_pts, K,  dist, None, None, False, 100, 5.0)
 	if retval == False:
 		return False, None, kp_firstframe, des_firstframe, matches
 	rmat, jacobian = cv2.Rodrigues(rvec)
@@ -207,16 +229,8 @@ def load_video(path):
 			video.append(frame[...,::-1]) #bgr to rgb
 		else:
 			break
-	return np.array(video)
-
-
-def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
-	matches = matcher.knnMatch(des_1, des_2, 2)
-	two_matches = filter(lambda x: len(x) ==2, matches)
-	better_matches = filter(lambda x: x[0].distance < x[1].distance*min_ratio, two_matches)
-	return list(map(lambda x : x[0], better_matches))
-
-
+	return np.array(video, dtype=np.uint8)
+	
 #https://medium.com/@ahmetozlu93/marker-less-augmented-reality-by-opencv-and-opengl-531b2af0a130
 def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
 	matches = matcher.knnMatch(des_1, des_2, 2)
@@ -297,6 +311,8 @@ if __name__ == "__main__":
 	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500)
 	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
 	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/')
+	parser.add_argument('-s', '--save', type=str, required=False, default = 'nosave', nargs='?')
+
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
 	
@@ -306,6 +322,7 @@ if __name__ == "__main__":
 	print("descriptor			", opt.descriptor)
 	print("extra_desc_param		", opt.extra_desc_param)
 	print("do_calibration			", opt.do_calibration)
+	print("save			", opt.save)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save)
