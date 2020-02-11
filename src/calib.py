@@ -16,7 +16,7 @@ objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
 # fname = 'data/mire_chessboard_real.jpg'
-fname = 'data/chess.png'
+fname = 'data/chess_big.png'
 img = cv2.imread(fname)
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 # cv2.imwrite("test.jpg",gray)
@@ -39,5 +39,5 @@ if ret == True:
 
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 print("Calib matrix:\n",  mtx)
-# print(ret, dist, rvecs,tvecs)
+print(dist)
 cv2.destroyAllWindows()

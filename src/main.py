@@ -19,19 +19,20 @@ from model import *
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
 def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder):
 	
-	video_path = data_folder + 'video_plateau.mp4'
+	video_path = data_folder + 'video_book.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
 	
 	# """"""precisely estimated calibration"""""""""
-	F = 800#270
+	F = 545*2#800#270
 	u0 = W/2#440.35
 	v0 = H/2#229.73#
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
-
-	angle = 0;#-np.pi/4
-	ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
+	Kinv = np.linalg.inv(K)
+	dist = np.array([[ 0.12740911, -0.37299138, -0.00393397,  0.000759 ,   0.43353899]])
+	#angle = 0;#-np.pi/4
+	#ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
 
 
@@ -45,7 +46,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 	FPS = 30.0
 	TPF = 1.0/FPS
-	n = 90
+	n = 0
 
 	print('Model loading...')
 	model_path = 'data/models/teapot/'
@@ -66,8 +67,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	if descriptor_choice == 'surf':
 		detector.setHessianThreshold(int(opt.extra_desc_param))
 	
-	marker = cv2.imread('data/plateau.png')
+	marker = cv2.imread('data/book.png')
 	H_marker, W_marker, C_marker = marker.shape
+	size_marker = min(H_marker, W_marker)
 	marker = cv2.cvtColor(marker,cv2.COLOR_BGR2GRAY)
 	
 	
@@ -75,7 +77,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	print('Keypoints/Descriptors : '+str(len(kp_marker)))
 
 	marker = cv2.drawKeypoints(marker,kp_marker,marker) 
-	cv2.imshow('marker', marker)
+	#cv2.imshow('marker', marker)
 	#cv2.waitKey(0)
 	flann_params = dict(algorithm = 6, table_number = 6, key_size = 12, multi_probe_level = 1)
 	
@@ -86,7 +88,14 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_matches = 15 #render anything only if nb_matches > min_match
-	
+
+	iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
+	ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
+	cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
+	cap = cv2.drawMatches(marker, kp_marker, iframe, kp_iframe, imatches[:min_matches], 0, flags=2)
+	cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
+	cv2.waitKey(0)
+
 	print('Ready')
 	while True:
 		begin_t = time.time()
@@ -99,18 +108,19 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		kp_frame, des_frame = detector.detectAndCompute(gray, None)
 		print("detection/description time : "+str(-beg + time.time()))
 		beg = time.time()
-		matches = matcher.match(des_marker, des_frame)
+		matches = matcher.match(des_iframe, des_frame)
 		print("matching              time : "+str(-beg + time.time()))
 		#matches = matches_ratio_test(matcher, des_marker, des_frame, 0.75)
 		
-		
+		cv2.imshow('frame',gray)
 		matches = sorted(matches, key=lambda x: x.distance)
 		print("matches : " + str(len(matches)))
 		if len(matches) > min_matches:
-			#cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
-			#cap = cv2.drawMatches(marker, kp_marker, frame, kp_frame, matches[:min_match], 0, flags=2)
-			#cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
-			src_pts = np.float32([kp_marker[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+			# cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
+			# cap = cv2.drawMatches(iframe, kp_iframe, frame, kp_frame, matches[:min_matches], 0, flags=2)
+			# cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
+			
+			src_pts = np.float32([kp_iframe[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
 			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 			beg = time.time()
 			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
@@ -122,16 +132,21 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 				#pts = np.float32([[0, 0], [0, H_marker - 1], [W_marker - 1, H_marker - 1], [W_marker - 1, 0]]).reshape(-1, 1, 2)
 				#dst = cv2.perspectiveTransform(pts, Homography)
 				#cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
-				cTci = compute_cTci(K, Homography)
-				cTw = np.dot(cTci,ciTw)
-				# print('cTw')
-				# print(cTw)
-				#render_cube(cTw, K, H, W, n * TPF)
-				render_model(model, cTw, K, H, W, n*TPF)
+				cTci = compute_cTci(Kinv, Homography)
+
+				cTw = np.dot(cTci, ciTw)
+				print('cTw')
+				print(cTw)			#cTw = ciTw
+				print('ciTw')
+				print(ciTw)
+				print('cTci')
+				print(cTci)
+				render_cube(cTw, K, H, W, n * TPF)
+				#render_model(model, cTw, K, H, W, n*TPF)
 		
 		
 		
-		#cv2.waitKey(0)
+		cv2.waitKey(0)
 		# 2/ Render an object
 		#=render_cube(H, W)
 		pygame.display.flip()
@@ -148,6 +163,21 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 				exit()
 	pygame.quit()
 
+def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_marker, min_matches):
+	kp_firstframe, des_firstframe = detector.detectAndCompute(gray, None)
+	matches = matcher.match(des_marker, des_firstframe)
+	matches = sorted(matches, key=lambda x: x.distance)
+	if len(matches) < min_matches:
+		return False, None, kp_firstframe, des_firstframe, matches
+	src_pts = np.float32([ np.array(kp_marker[m.queryIdx].pt + (0,))/size_marker for m in matches]).reshape(-1, 1, 3)
+	dst_pts = np.float32([kp_firstframe[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+	retval, rvec, tvec, inliers	= cv2.solvePnPRansac(src_pts, dst_pts, K,  dist, None, None, False, 1000, 3.0)
+	if retval == False:
+		return False, None, kp_firstframe, des_firstframe, matches
+	rmat, jacobian = cv2.Rodrigues(rvec)
+	ciTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
+	ciTw = np.vstack([ciTw, [0,0,0,1]])
+	return True, ciTw, kp_firstframe, des_firstframe, matches
 
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 
 def load_video(path):
@@ -160,6 +190,8 @@ def load_video(path):
 		else:
 			break
 	return np.array(video)
+
+
 	
 #https://medium.com/@ahmetozlu93/marker-less-augmented-reality-by-opencv-and-opengl-531b2af0a130
 def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
@@ -168,36 +200,17 @@ def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
 	better_matches = filter(lambda x: x[0].distance < x[1].distance*min_ratio, two_matches)
 	return list(map(lambda x : x[0], better_matches))
 
-#thanks python for offering basic functions
-def normalize(v):
-	norm = np.linalg.norm(v)
-	if norm == 0: 
-		return v
-	return v / norm
 
-def compute_cTci(K,homography):
-
-	# Compute rotation along the x and y axis as well as the translation
-	# rot_and_transl = np.dot(np.linalg.inv(K), homography)
-	# print(rot_and_transl)
-	# c1 = rot_and_transl[:, 0]
-	# c2 = rot_and_transl[:, 1]
-	# citc = rot_and_transl[:, 2]
-	# c3 = np.cross(c1,c2, axis = 0)
-	# cRtci = np.column_stack((c1, c2, c3, citc));
-	# print('cRtci')
-	# print(cRtci)
-	# return np.vstack([cRtci, [0,0,0,1]])
-
+def compute_cTci(Kinv,homography):
 	#Compute rotation along the x and y axis as well as the translation
 	#homography = homography * (-1)
-	rot_and_transl = np.dot(np.linalg.inv(K), homography)
+	rot_and_transl = np.dot(Kinv, homography)
 	col_1 = rot_and_transl[:, 0]
 	col_2 = rot_and_transl[:, 1]
 	col_3 = rot_and_transl[:, 2]
 	
-	# print('rot_and_transl')
-	# print(rot_and_transl)
+	print('rot_and_transl')
+	print(rot_and_transl)
 	# print('Kinv')
 	# print(np.linalg.inv(K))
 	#normalise vectors
@@ -213,8 +226,8 @@ def compute_cTci(K,homography):
 	rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_3 = np.cross(rot_1, rot_2, axis = 0)
-
 	#finally, compute the 3D projection matrix from the marker to the current frame
+
 	cTci = np.column_stack((rot_1, rot_2, rot_3, translation))
 	cTci = np.vstack([cTci, [0,0,0,1]])
 	# print('cTci')
