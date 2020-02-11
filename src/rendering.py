@@ -21,13 +21,17 @@ def init_shaders(shader_folder):
 	glShaderSource(vert_ID, vert_code)
 	glCompileShader(vert_ID)
 	if not glGetShaderiv(vert_ID, GL_COMPILE_STATUS):
-		raise Exception('Failed to compile the vertex shader!')
+		error = glGetShaderInfoLog(vert_ID)
+		print(error)
+		raise Exception('Failed to compile the vertex shader!', error)
 
 	frag_ID = glCreateShader(GL_FRAGMENT_SHADER)
 	glShaderSource(frag_ID, frag_code)
 	glCompileShader(frag_ID)
 	if not glGetShaderiv(frag_ID, GL_COMPILE_STATUS):
-		raise Exception('Failed to compile the fragment shader!')
+		error = glGetShaderInfoLog(frag_ID)
+		print(error)
+		raise Exception('Failed to compile the fragment shader!', error)
 
 	program_ID = glCreateProgram()
 	glAttachShader(program_ID, vert_ID)
@@ -35,7 +39,9 @@ def init_shaders(shader_folder):
 	glLinkProgram(program_ID)
 
 	if not glGetProgramiv(program_ID, GL_LINK_STATUS):
-		raise Exception('Failed to link the shader program!')
+		error = glGetProgramInfoLog(program_ID)
+		print(error)
+		raise Exception('Failed to link the shader program!', error)
 
 	SP = {
 		'vert_ID': vert_ID, 
