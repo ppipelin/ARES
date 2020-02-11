@@ -45,6 +45,7 @@ def init_shaders(shader_folder):
 
 	addAttribute('in_position')
 	addAttribute('in_normal')
+	addAttribute('in_uv')
 
 	addUniform('uni_mat_view')
 	addUniform('uni_mat_projection')

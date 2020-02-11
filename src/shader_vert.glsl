@@ -2,9 +2,11 @@
 // Définition des attributs
 in vec3 in_position;
 in vec3 in_normal;
+in vec2 in_uv;
 // Définition des varying
 out vec3 var_position;
 out vec3 var_normal;
+out vec2 var_uv;
 // Définition des uniforms
 uniform mat4 uni_mat_view;
 uniform mat4 uni_mat_projection;
@@ -21,4 +23,5 @@ void main()
     vec4 position = uni_mat_view * vec4(in_position, 1.0);
     var_position = position.xyz / position.www; // Passage coordonnées homogenes -> cartesiennes
     var_normal = normalize(normalMatrix(uni_mat_view)*in_normal);
+    var_uv = in_uv;
 }

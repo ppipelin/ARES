@@ -2,6 +2,7 @@
 // Declaration des varyings
 in vec3 var_position;
 in vec3 var_normal;
+in vec2 var_uv;
 // La sortie correspondant à la couleur du fragment
 layout (location = 0) out vec4 out_fragColor;
 // Declaration des uniforms
@@ -23,7 +24,9 @@ vec3 direction_to_color(vec3 dir)
 // Programme principal
 void main()
 {
-    out_fragColor = vec4(color(), 1.0);
-    out_fragColor = vec4(1, 0, 0, 1);
-    out_fragColor = vec4(direction_to_color(var_normal), 0.75);
+    float alpha = 0.75;
+    //out_fragColor = vec4(color(), alpha);
+    //out_fragColor = vec4(1, 0, 0, alpha);
+    //out_fragColor = vec4(direction_to_color(var_normal), alpha);
+    out_fragColor = vec4(var_uv.x, var_uv.y, 0, alpha);
 }
