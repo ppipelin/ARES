@@ -218,27 +218,6 @@ def set_modelview_from_camera(cTw):
 
 	# replace model view with the new matrix
 	glUniformMatrix4fv(SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
-	
-  
-def render_cube(cTw, K, H,W,t):
-	glUseProgram(SP['PID'])
-	glEnable(GL_DEPTH_TEST)
-	glBindTexture(GL_TEXTURE_2D, 0) 
-	
-	set_projection_from_camera(K, H, W)
-	set_modelview_from_camera(cTw)
-	
-	glEnable(GL_BLEND)
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-	#glEnable(GL_CULL_FACE)
-	#glCullFace(GL_BACK)
-	Cube(t)
-	#glDisable(GL_CULL_FACE)
-	
-	glLoadIdentity()
-	glDisable(GL_BLEND)
-
-	glColor(255.0, 255.0, 255.0, 255.0)
 
 def render_model(model, cTw, K, H,W,t):
 	glUseProgram(SP['PID'])

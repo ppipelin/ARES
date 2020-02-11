@@ -17,7 +17,7 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name):
 	
 	video_path = data_folder + 'video_book.mp4'
 	print('loading video from path : ' +  video_path +'...')	
@@ -53,7 +53,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	n = 0
 
 	print('Model loading...')
-	model_path = 'data/models/teapot/'
+	model_path = 'data/models/' + model_name + '/'
 	model = Model()
 	model.load_from_obj(model_path+'model.obj')
 	
@@ -312,6 +312,7 @@ if __name__ == "__main__":
 	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
 	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/')
 	parser.add_argument('-s', '--save', type=str, required=False, default = 'nosave', nargs='?')
+	parser.add_argument('-m', '--model', type=str, required=False, default = 'cube')
 
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
@@ -323,6 +324,7 @@ if __name__ == "__main__":
 	print("extra_desc_param		", opt.extra_desc_param)
 	print("do_calibration			", opt.do_calibration)
 	print("save			", opt.save)
+	print("model		", opt.model)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save, opt.model)
