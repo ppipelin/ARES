@@ -28,6 +28,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	F = 545*2#800#270
 	u0 = W/2#440.35
 	v0 = H/2#229.73#
+	coords0 = np.array((u0,v0))
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
 	Kinv = np.linalg.inv(K)
 	dist = np.array([[ 0.12740911, -0.37299138, -0.00393397,  0.000759 ,   0.43353899]])
@@ -98,55 +99,72 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 	print('Ready')
 	while True:
+		print('#' * 100)
+		print('frame ' ,n)
 		begin_t = time.time()
+		
 		frame = video[n,:,:,:]
-		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		clear(frame, H, W, y, x, textID)
-		
-		# 1/ Do the pose estimation
-		beg = time.time()
-		kp_frame, des_frame = detector.detectAndCompute(gray, None)
-		print("detection/description time : "+str(-beg + time.time()))
-		beg = time.time()
-		matches = matcher.match(des_iframe, des_frame)
-		print("matching              time : "+str(-beg + time.time()))
-		#matches = matches_ratio_test(matcher, des_marker, des_frame, 0.75)
-		
-		cv2.imshow('frame',gray)
-		matches = sorted(matches, key=lambda x: x.distance)
-		print("matches : " + str(len(matches)))
-		if len(matches) > min_matches:
-			# cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
-			# cap = cv2.drawMatches(iframe, kp_iframe, frame, kp_frame, matches[:min_matches], 0, flags=2)
-			# cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
-			
-			src_pts = np.float32([kp_iframe[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
-			dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
-			beg = time.time()
-			Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-			print("estimating homography time : "+str(-beg + time.time()))
-			#Homography = -Homography
-			# print('Homography')
-			# print(Homography)
-			if Homography is not None:
-				#pts = np.float32([[0, 0], [0, H_marker - 1], [W_marker - 1, H_marker - 1], [W_marker - 1, 0]]).reshape(-1, 1, 2)
-				#dst = cv2.perspectiveTransform(pts, Homography)
-				#cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
-				cTci = compute_cTci(Kinv, Homography)
+		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
 
-				cTw = np.dot(cTci, ciTw)
-				print('cTw')
-				print(cTw)			#cTw = ciTw
-				print('ciTw')
-				print(ciTw)
-				print('cTci')
-				print(cTci)
-				render_cube(cTw, K, H, W, n * TPF)
-				#render_model(model, cTw, K, H, W, n*TPF)
+		if ok_cTw:
+			render_cube(cTw, K, H, W, n * TPF)
+
+		# # 1/ Do the pose estimation
+		# beg = time.time()
+		# kp_frame, des_frame = detector.detectAndCompute(gray, None)
+		# print("detection/description time : "+str(-beg + time.time()))
+		# beg = time.time()
+		# matches = matcher.match(des_iframe, des_frame)
+		# print("matching              time : "+str(-beg + time.time()))
+		# #matches = matches_ratio_test(matcher, des_marker, des_frame, 0.75)
+		
+		# #cv2.imshow('frame',gray)
+		# matches = sorted(matches, key=lambda x: x.distance)
+		# print("matches : " + str(len(matches)))
+		# if len(matches) > min_matches:
+		# 	# cv2.drawKeypoints(frame,kp_frame,frame) 	# par ref
+		# 	# cap = cv2.drawMatches(iframe, kp_iframe, frame, kp_frame, matches[:min_matches], 0, flags=2)
+		# 	# cv2.imshow('frame', cap[...,::-1]) # rgb->bgr, cv2.imshow takes bgr images...
+			
+		# 	src_pts = np.float32([kp_iframe[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+		# 	dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+
+		# 	E, mask = cv2.findEssentialMat(src_pts, dst_pts)
+		# 	retval, R, t, mask  = cv2.recoverPose(E, src_pts, dst_pts, K)
+		# 	print(R)
+		# 	print(t)
+		# 	# src_pts = np.float32([(np.array(kp_iframe[m.queryIdx].pt) - coords0)/F for m in matches]).reshape(-1, 1, 2)
+		# 	# dst_pts = np.float32([(np.array(kp_frame[m.trainIdx].pt) - coords0)/F for m in matches]).reshape(-1, 1, 2)
+		# 	beg = time.time()
+		# 	Homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+		# 	print("estimating homography time : "+str(-beg + time.time()))
+		# 	#Homography = -Homography
+		# 	# print('Homography')
+		# 	# print(Homography)
+		# 	if Homography is not None:
+		# 		#pts = np.float32([[0, 0], [0, H_marker - 1], [W_marker - 1, H_marker - 1], [W_marker - 1, 0]]).reshape(-1, 1, 2)
+		# 		#dst = cv2.perspectiveTransform(pts, Homography)
+		# 		#cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)
+		# 		#cTci = compute_cTci(np.dot(Kinv,Homography), F, u0, v0)
+		# 		#cTci = compute_cTci(Homography, F, u0, v0)
+		# 		ok_cTci, cTci = compute_cTci_OpenCV(Homography, K)
+		# 		#cTci = compute_cTci_simple(Homography, F, u0, v0)
+		# 		if(ok_cTci):
+		# 			cTw = np.dot(cTci, ciTw)
+		# 			print('cTw')
+		# 			print(cTw)			#cTw = ciTw
+		# 			print('ciTw')
+		# 			print(ciTw)
+		# 			print('cTci')
+		# 			print(cTci)
+		# 			render_cube(cTw, K, H, W, n * TPF)
+		# 		#render_model(model, cTw, K, H, W, n*TPF)
 		
 		
 		
-		cv2.waitKey(0)
+		#cv2.waitKey(0)
 		# 2/ Render an object
 		#=render_cube(H, W)
 		pygame.display.flip()
@@ -155,7 +173,6 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		delta = end_t - begin_t
 		print(str(delta) + '/'+ str(TPF)+ '(' +str(delta/TPF)+')')
 		time.sleep(max(0,TPF - delta))
-		
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.display.quit()
@@ -179,6 +196,7 @@ def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_m
 	ciTw = np.vstack([ciTw, [0,0,0,1]])
 	return True, ciTw, kp_firstframe, des_firstframe, matches
 
+
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 
 def load_video(path):
 	cap = cv2.VideoCapture(path)
@@ -192,7 +210,13 @@ def load_video(path):
 	return np.array(video)
 
 
-	
+def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
+	matches = matcher.knnMatch(des_1, des_2, 2)
+	two_matches = filter(lambda x: len(x) ==2, matches)
+	better_matches = filter(lambda x: x[0].distance < x[1].distance*min_ratio, two_matches)
+	return list(map(lambda x : x[0], better_matches))
+
+
 #https://medium.com/@ahmetozlu93/marker-less-augmented-reality-by-opencv-and-opengl-531b2af0a130
 def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
 	matches = matcher.knnMatch(des_1, des_2, 2)
@@ -201,13 +225,15 @@ def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
 	return list(map(lambda x : x[0], better_matches))
 
 
-def compute_cTci(Kinv,homography):
+def compute_cTci(Kinv_homography, F, u0, v0):
 	#Compute rotation along the x and y axis as well as the translation
-	#homography = homography * (-1)
-	rot_and_transl = np.dot(Kinv, homography)
+
+	rot_and_transl = Kinv_homography
 	col_1 = rot_and_transl[:, 0]
 	col_2 = rot_and_transl[:, 1]
 	col_3 = rot_and_transl[:, 2]
+
+
 	
 	print('rot_and_transl')
 	print(rot_and_transl)
@@ -217,7 +243,7 @@ def compute_cTci(Kinv,homography):
 	l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
 	rot_1 = col_1 / l
 	rot_2 = col_2 / l
-	translation = col_3 / l
+	translation = col_3# / l
 	#compute the orthonormal basis
 	c = rot_1 + rot_2
 
@@ -227,12 +253,42 @@ def compute_cTci(Kinv,homography):
 	rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
 	rot_3 = np.cross(rot_1, rot_2, axis = 0)
 	#finally, compute the 3D projection matrix from the marker to the current frame
+	# translation[0] = (translation[0] + u0) 
+	# translation[1] = (translation[1] + v0)
+	# translation[2] = (translation[2] - F)
 
+	# translation = - translation / F
 	cTci = np.column_stack((rot_1, rot_2, rot_3, translation))
 	cTci = np.vstack([cTci, [0,0,0,1]])
 	# print('cTci')
 	# print(cTci)
 	return cTci
+
+def compute_cTci_simple(Kinv_homography, F, u0, v0):
+	#Compute rotation along the x and y axis as well as the translation
+
+	rot_and_transl = Kinv_homography
+	c1 = rot_and_transl[:, 0]
+	c2 = rot_and_transl[:, 1]
+	t = rot_and_transl[:, 2]
+	c3 = np.cross(c1, c2, axis = 0)
+	cTci = np.column_stack((c1, c2, c3, t))
+	cTci = np.vstack([cTci, [0,0,0,1]])
+	return cTci
+
+def compute_cTci_OpenCV(H, K):
+	retval, rotations, translations, normals = cv2.decomposeHomographyMat(H, K)
+	# if retval is not 1:
+	# 	print('fail : ', retval)
+	# 	exit()
+	if retval is 0:
+		return False, None
+	print(retval)
+	rmat = rotations[0]
+	tvec = translations[0]
+	cTci = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
+	cTci = np.vstack([cTci, [0,0,0,1]])
+	return True, cTci
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
