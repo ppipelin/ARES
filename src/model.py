@@ -1,6 +1,8 @@
 import numpy as np
 from OpenGL.GL import *
 from PIL import Image
+import glm
+import math
 
 
 class Model:
@@ -21,10 +23,13 @@ class Model:
 
 
     def render(self, SP):
-        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
+        scale = 0.5
+        scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
+        rotateM = glm.rotate(glm.mat4(), -math.pi/2.0, glm.vec3(1, 0, 0))
+        M = scaleM * rotateM
+        glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
 
-        
-        
+        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
 
         # positions
         in_position_ID = SP['in_position_ID']

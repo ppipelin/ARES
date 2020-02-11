@@ -56,12 +56,25 @@ def init_shaders(shader_folder):
 	addUniform('uni_mat_V')
 	addUniform('uni_mat_P')
 	addUniform('uni_mat_M')
-	addUniform('uni_lightPosition')
+
+	addUniform('uni_WlightDirection')
 	addUniform('uni_lightColor')
-	addUniform('uni_diffuseColor')
+
+	addUniform('uni_mode')
+
+	addUniform('uni_diffuse')
+	addUniform('uni_glossy')
+	addUniform('uni_ambiant')
 	
 	print('shader program: ', SP)
 	print('init shader: done!')
+
+	glUseProgram(program_ID)
+	glUniform3f(SP['uni_ambiant_ID'], 0.2, 0.2, 0.2)
+	glUniform3f(SP['uni_lightColor_ID'], 1, 1, 1)
+	glUniform3f(SP['uni_WlightDirection_ID'], 0, 0, 1)
+	glUniform3f(SP['uni_diffuse_ID'], 1, 1, 1)
+	glUseProgram(0)
 
 
 def addAttribute(attrib_name):
@@ -189,7 +202,6 @@ def nparray_to_glm_mat(array):
 
 def set_modelview_from_camera(cTw):
 	"""  Set the model view matrix from camera pose. """
-	assert(SP['uni_mat_M_ID'] != -1)
 	assert(SP['uni_mat_V_ID'] != -1)
 
 	cv_to_gl = np.eye(4)
@@ -203,15 +215,10 @@ def set_modelview_from_camera(cTw):
 	viewMatrix = viewMatrix.T
 
 	V = nparray_to_glm_mat(viewMatrix)
-	
-	scale = 0.5
-	scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
-	rotateM = glm.rotate(glm.mat4(), -math.pi/2.0, glm.vec3(1, 0, 0))
-	M = scaleM * rotateM
 
 	# replace model view with the new matrix
 	glUniformMatrix4fv(SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
-	glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
+	
   
 def render_cube(cTw, K, H,W,t):
 	glUseProgram(SP['PID'])
