@@ -6,3 +6,4 @@ bin/.vs
 __pycache__
 07368948.pdf
 .vscode
+results/*
