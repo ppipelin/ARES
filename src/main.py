@@ -154,7 +154,7 @@ def load_video(path):
 			video.append(frame[...,::-1]) #bgr to rgb
 		else:
 			break
-	return np.array(video)
+	return np.array(video, dtype=np.uint8)
 	
 #https://medium.com/@ahmetozlu93/marker-less-augmented-reality-by-opencv-and-opengl-531b2af0a130
 def matches_ratio_test(matcher, des_1, des_2, min_ratio = 0.75):
