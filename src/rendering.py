@@ -214,9 +214,9 @@ def set_modelview_from_camera(cTw):
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
 	viewMatrix = np.dot(cv_to_gl, cTw)
-	viewMatrix[0,3] *= 0.01 # cm to m
-	viewMatrix[1,3] *= 0.01 # cm to m
-	viewMatrix[2,3] *= 0.01 # cm to m
+	# viewMatrix[0,3] *= 0.01 # cm to m
+	# viewMatrix[1,3] *= 0.01 # cm to m
+	# viewMatrix[2,3] *= 0.01 # cm to m
 
 	viewMatrix = viewMatrix.T
 
