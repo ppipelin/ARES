@@ -53,8 +53,9 @@ def init_shaders(shader_folder):
 	addAttribute('in_normal')
 	addAttribute('in_uv')
 
-	addUniform('uni_mat_view')
-	addUniform('uni_mat_projection')
+	addUniform('uni_mat_V')
+	addUniform('uni_mat_P')
+	addUniform('uni_mat_M')
 	addUniform('uni_lightPosition')
 	addUniform('uni_lightColor')
 	addUniform('uni_diffuseColor')
@@ -124,8 +125,7 @@ def clear(image, H, W, y, x, textID):
 
 def set_projection_from_camera(K, H, W):
 	"""  Set view from a camera calibration matrix. """
-	if SP['uni_mat_projection_ID'] == -1:
-		return
+	assert(SP['uni_mat_P_ID'] != -1)
 	glMatrixMode(GL_PROJECTION)
 	glLoadIdentity()
 
@@ -141,7 +141,7 @@ def set_projection_from_camera(K, H, W):
 	
 	# set perspective
 	mP = glm.perspective(fovy, aspect, near, far)
-	glUniformMatrix4fv(SP['uni_mat_projection_ID'], 1, False, glm.value_ptr(mP))
+	glUniformMatrix4fv(SP['uni_mat_P_ID'], 1, False, glm.value_ptr(mP))
 
 	glViewport(0,0,W,H)
 
@@ -189,8 +189,9 @@ def nparray_to_glm_mat(array):
 
 def set_modelview_from_camera(cTw):
 	"""  Set the model view matrix from camera pose. """
-	if SP['uni_mat_view_ID'] == -1:
-		return
+	assert(SP['uni_mat_M_ID'] != -1)
+	assert(SP['uni_mat_V_ID'] != -1)
+
 	cv_to_gl = np.eye(4)
 	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
 	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
@@ -201,14 +202,16 @@ def set_modelview_from_camera(cTw):
 
 	viewMatrix = viewMatrix.T
 
-	M = nparray_to_glm_mat(viewMatrix)
+	V = nparray_to_glm_mat(viewMatrix)
+	
 	scale = 0.5
 	scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
 	rotateM = glm.rotate(glm.mat4(), -math.pi/2.0, glm.vec3(1, 0, 0))
-	M = M * scaleM * rotateM
+	M = scaleM * rotateM
 
 	# replace model view with the new matrix
-	glUniformMatrix4fv(SP['uni_mat_view_ID'], 1, False, glm.value_ptr(M))
+	glUniformMatrix4fv(SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
+	glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
   
 def render_cube(cTw, K, H,W,t):
 	glUseProgram(SP['PID'])
