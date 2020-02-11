@@ -17,13 +17,16 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save):
 	
 	video_path = data_folder + 'video_plateau.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
-	
+	# N = N//16
+	if(save is not 'nosave'):
+		video_to_save = np.empty((0, H, W, 3), dtype=np.uint8)
+
 	# """"""precisely estimated calibration"""""""""
 	F = 800
 	u0 = W/2
@@ -130,6 +133,15 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		# 2/ Render an object
 		#=render_cube(H, W)
 		pygame.display.flip()
+
+		if(save is not 'nosave'):
+			string_image = pygame.image.tostring(window, 'RGB')
+			temp_surf = pygame.image.fromstring(string_image,(W, H),'RGB')
+			tmp_arr = pygame.surfarray.array3d(temp_surf)
+			tmp_arr = np.swapaxes(tmp_arr,0,1)
+			video_to_save = np.append(video_to_save, [tmp_arr], axis=0)
+			if((n + 1) % N is 0):
+				break
 		n = (n + 1) % N
 		end_t = time.time()
 		delta = end_t - begin_t
@@ -142,6 +154,14 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 				pygame.quit()
 				exit()
 	pygame.quit()
+	if(save is not 'nosave'):
+		if(save is None):
+			save_file = descriptor_choice + '.mp4'
+		else:
+			save_file = save
+		out = cv2.VideoWriter('results/'+str(save_file), cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 30, (W,H))
+		for i in range(video_to_save.shape[0]):
+			out.write(cv2.cvtColor(np.uint8(video_to_save[i]), cv2.COLOR_BGR2RGB))
 
 
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 
@@ -223,6 +243,8 @@ if __name__ == "__main__":
 	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500)
 	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
 	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/')
+	parser.add_argument('-s', '--save', type=str, required=False, default = 'nosave', nargs='?')
+
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
 	
@@ -232,6 +254,7 @@ if __name__ == "__main__":
 	print("descriptor			", opt.descriptor)
 	print("extra_desc_param		", opt.extra_desc_param)
 	print("do_calibration			", opt.do_calibration)
+	print("save			", opt.save)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save)
