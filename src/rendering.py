@@ -105,7 +105,7 @@ def init_background_texture(H, W):
 	return [textID, H/Hpow2, W/Wpow2]
 
 def switch_shader_type():
-	SP['uni_mode'] = 1 - SP['uni_mode']
+	SP['uni_mode'] = (SP['uni_mode'] + 1) % 3
 	glUseProgram(SP['PID'])
 	glUniform1ui(SP['uni_mode_ID'], SP['uni_mode'])
 	glUseProgram(0)

@@ -21,12 +21,20 @@ vec3 direction_to_color(vec3 dir)
     return abs(dir);
 }
 
-void fresnell_normal()
+void normal_shading()
 {
     vec3 Wnormal = normalize(var_Wnormal);
     float alpha = 0.5;//abs(dot(Wnormal, normalize(var_Cposition))); // TODO
     alpha = 1.0 - alpha;
     out_fragColor = vec4(direction_to_color(Wnormal), alpha);
+}
+
+void uv_shading()
+{
+    vec3 Wnormal = normalize(var_Wnormal);
+    float alpha = 0.5;//abs(dot(Wnormal, normalize(var_Cposition))); // TODO
+    alpha = 1.0 - alpha;
+    out_fragColor = vec4(var_uv.x, 0.1, var_uv.y, alpha);
 }
 
 void phong()
@@ -45,12 +53,16 @@ void phong()
 
 void main()
 {
-    if(uni_mode == 0u)
+    switch(uni_mode)
     {
-        fresnell_normal();
-    }
-    else
-    {
-        phong();
+        case 0u:
+            phong();
+        break;
+        case 1u:
+            normal_shading();
+        break;
+        default:
+            uv_shading();
+        break;
     }
 }
