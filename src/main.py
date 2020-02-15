@@ -17,9 +17,9 @@ from model import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name, video_name, unmute):
 	
-	video_path = data_folder + 'video_book.mp4'
+	video_path = data_folder + 'video_' + video_name + '.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
@@ -71,7 +71,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	if descriptor_choice == 'surf':
 		detector.setHessianThreshold(int(opt.extra_desc_param))
 	
-	marker = cv2.imread('data/book.png')
+	marker = cv2.imread(data_folder + video_name + '.png')
 	H_marker, W_marker, C_marker = marker.shape
 	size_marker = min(H_marker, W_marker)
 	marker = cv2.cvtColor(marker,cv2.COLOR_BGR2GRAY)
@@ -102,8 +102,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 	print('Ready')
 	while True:
-		print('#' * 100)
-		print('frame ' ,n)
+		if unmute:
+			print('#' * 100)
+			print('frame ' ,n)
 		begin_t = time.time()
 		
 		frame = video[n,:,:,:]
@@ -185,7 +186,10 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		n = (n + 1) % N
 		end_t = time.time()
 		delta = end_t - begin_t
-		print(str(delta) + '/'+ str(TPF)+ '(' +str(delta/TPF)+')')
+
+		if unmute:
+			print(str(delta) + '/'+ str(TPF)+ '(' +str(delta/TPF)+')')
+		
 		time.sleep(max(0,TPF - delta))
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
@@ -308,13 +312,15 @@ def compute_cTci_OpenCV(H, K):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-d", "--data_folder", type=str, required=False, default="data/")
-	parser.add_argument("-desc", "--descriptor", type=str, required=False, choices=['sift', 'surf', 'orb'], default='surf')
-	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500)
-	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true')
-	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/')
-	parser.add_argument('-s', '--save', type=str, required=False, default = 'nosave', nargs='?')
-	parser.add_argument('-m', '--model', type=str, required=False, default = 'cube')
+	parser.add_argument("-d", "--data_folder", type=str, required=False, default="data/", help="folder containing the data")
+	parser.add_argument("-desc", "--descriptor", type=str, required=False, choices=['sift', 'surf', 'orb'], default='surf', help="descriptor choice")
+	parser.add_argument('-e','--extra_desc_param', type=int, required=False, default=2500, help="extra descriptor parameter (number of desc)")
+	parser.add_argument('-c', '--calibration', dest='do_calibration', action='store_true', help="choose to do the calibration")
+	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/', help="select the shader folder (and so the shader)")
+	parser.add_argument('-s', '--save', type=str, required=False, default='nosave', nargs='?', help="save the AR video? (and where)")
+	parser.add_argument('-m', '--model', type=str, required=False, default='cube', help="choose the model to render")
+	parser.add_argument('-v', '--video', type=str, required=False, default='plateau', help="select video (inside the data folder")
+	parser.add_argument('-u', '--unmute', action='store_true', required=False, default=False, help='disable perf prints')
 
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
@@ -322,6 +328,7 @@ if __name__ == "__main__":
 	print("#" * 100)
 	print("Launching main.py with the following parameters : ")
 	print("data_folder			", opt.data_folder)
+	print("video				", opt.video)
 	print("descriptor			", opt.descriptor)
 	print("extra_desc_param		", opt.extra_desc_param)
 	print("do_calibration			", opt.do_calibration)
@@ -329,4 +336,4 @@ if __name__ == "__main__":
 	print("model		", opt.model)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save, opt.model)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save, opt.model, opt.video, opt.unmute)
