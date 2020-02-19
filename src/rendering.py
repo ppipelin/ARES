@@ -152,7 +152,7 @@ def set_P_from_camera(K, H, W):
 
 	fx = K[0,0]
 	fy = K[1,1]
-	fovy = 2*np.arctan(0.5*H/fy)*180/np.pi
+	fovy = 2*np.arctan(0.5*H/fy)#*180/np.pi
 	aspect = (W*fy)/(H*fx)
 	# print('fovy '+ str(fovy))
 	# print('aspect '+ str(aspect))
@@ -161,43 +161,20 @@ def set_P_from_camera(K, H, W):
 	far = 100.0
 	
 	# set perspective
-	mP = glm.perspective(fovy*0.1, aspect, near, far)
+	mP = glm.perspective(fovy, aspect, near, far)
 	glUniformMatrix4fv(SP['uni_mat_P_ID'], 1, False, glm.value_ptr(mP))
 
 	glViewport(0,0,W,H)
 	glUseProgram(0)
 
-# def set_modelview_from_camera(cTw):
-	## """  Set the model view matrix from camera pose. """
-	# Rt = cTw[:-1, :]
-
-	##rotate teapot 90 deg around x-axis so that z-axis is up
-	# Rx = np.array([[1,0,0],[0,0,-1],[0,1,0]])
-
-	##set rotation to best approximation
-	# R = Rt[:,:3]
-	# U,S,V = np.linalg.svd(R)
-	# R = np.dot(U,V)
-	# R[0,:] = -R[0,:] # change sign of x-axis
-	
-	##set translation
-	# t = np.squeeze(Rt[:,3])
-
-	##setup 4*4 model view matrix
-	# M = np.eye(4)
-	# M[:3,:3] = np.dot(R,Rx)
-	# M[:3,3] = t
-	
-	# print('M')
-	# print(M)
-	##transpose and flatten to get column order
-	# M = M.T
-	# m = M.flatten() 
-
-	##replace model view with the new matrix
-	# glMatrixMode(GL_MODELVIEW)
-	# glLoadIdentity()
-	# glLoadMatrixf(m)
+def set_M(scale, size_scale, H_marker, W_marker):
+	glUseProgram(SP['PID'])
+	H = H_marker * size_scale
+	W = W_marker * size_scale
+	#M = glm.translate(glm.scale(glm.mat4(), glm.vec3(scale, scale, scale)), glm.vec3(H, W,0)) # should work...
+	M = glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
+	glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
+	glUseProgram(0)
 
 def nparray_to_glm_mat(array):
 	res = glm.mat4()
@@ -222,14 +199,14 @@ def set_V_from_camera(cTw, t):
 	cv_to_gl[1, 1] = -1
 	cv_to_gl[2, 2] = -1
 
-	viewMatrix = np.matmul(cv_to_gl, cTw)
+	viewMatrix = np.dot(cv_to_gl, cTw)
 	# viewMatrix[0,3] *= 0.01 # cm to m
 	# viewMatrix[1,3] *= 0.01 # cm to m
 	# viewMatrix[2,3] *= 0.01 # cm to m
 
 	viewMatrix = viewMatrix.T
 
-	V = nparray_to_glm_mat(viewMatrix)* glm.rotate(glm.mat4(), math.pi/2, glm.vec3(1, 0, 0))
+	V = nparray_to_glm_mat(viewMatrix) * glm.rotate(glm.mat4(), math.pi/2, glm.vec3(1, 0, 0))
 	
 
 	#V = glm.translate(glm.mat4(), glm.vec3(0, 0, -10*2))# * glm.rotate(glm.mat4(), math.pi, glm.vec3(1, 0, 0))

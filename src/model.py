@@ -20,13 +20,11 @@ class Model:
         self.texture_offset = 0
         self.normal_offset = 0
 
-        self.M = glm.scale(glm.mat4(), glm.vec3(1, 1, 1))
-
-
+        #self.M = glm.scale(glm.mat4(), glm.vec3(1, 1, 1))
 
     def render(self, SP):
         
-        glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(self.M))
+        #glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(self.M))
 
         glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
 
@@ -57,7 +55,7 @@ class Model:
         scale = 0.5
         scaleM =  glm.scale(glm.mat4(), glm.vec3(scale, -scale, scale))
         rotateM = glm.rotate(glm.mat4(), -math.pi/2, glm.vec3(1, 0, 0))
-        self.M = scaleM 
+        #self.M = scaleM 
 
         self.textured = not (tex_file == '')
         for line in open(obj_file, 'r'):

@@ -74,8 +74,8 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	marker = cv2.imread(data_folder + video_name + '.png')
 	H_marker, W_marker, C_marker = marker.shape
 	size_marker = min(H_marker, W_marker)
+	size_scale = 12.5/size_marker # the width of the target measures 12.5 cm => will be 12.5 unit wide
 	marker = cv2.cvtColor(marker,cv2.COLOR_BGR2GRAY)
-	
 	
 	kp_marker, des_marker = detector.detectAndCompute(marker, None)
 	print('Keypoints/Descriptors : '+str(len(kp_marker)))
@@ -106,20 +106,20 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 			print('#' * 100)
 			print('frame ' ,n)
 		begin_t = time.time()
-		
+		t = n * TPF
+
 		frame = video[n,:,:,:]
 		clear(frame, H, W, y, x, textID)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-		size_scale = 12.5/min(H_marker, W_marker) # the width of the target measures 12.5 cm => will be 12.5 unit wide
+		
 		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
 
-		t = n * TPF
-		
 		if ok_cTw:
 			set_P_from_camera(K, H, W)
 			set_V_from_camera(cTw, t)
-			
-		render_model(model, n * TPF)
+			set_M(1, size_scale, H_marker, W_marker)
+
+			render_model(model, n * TPF)
 		# # 1/ Do the pose estimation
 		# beg = time.time()
 		# kp_frame, des_frame = detector.detectAndCompute(gray, None)
@@ -322,7 +322,7 @@ if __name__ == "__main__":
 	parser.add_argument('-sf', '--shader_folder', type=str, required=False, default = 'src/', help="select the shader folder (and so the shader)")
 	parser.add_argument('-s', '--save', type=str, required=False, default='nosave', nargs='?', help="save the AR video? (and where)")
 	parser.add_argument('-m', '--model', type=str, required=False, default='cube', help="choose the model to render")
-	parser.add_argument('-v', '--video', type=str, required=False, default='plateau', help="select video (inside the data folder")
+	parser.add_argument('-v', '--video', type=str, required=False, default='book', help="select video (inside the data folder")
 	parser.add_argument('-u', '--unmute', action='store_true', required=False, default=False, help='disable perf prints')
 
 	parser.set_defaults(do_calibration=False)
