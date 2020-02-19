@@ -22,7 +22,8 @@ void main()
 {
     mat4 MVP = uni_mat_P * uni_mat_V * uni_mat_M;
     gl_Position = MVP * vec4(in_position, 1.0);
-    var_Wposition = vec3(uni_mat_M * vec4(in_position, 1.0));
+    vec4 Wposition = (uni_mat_M * vec4(in_position, 1.0));
+    var_Wposition = Wposition.xyz / Wposition.w;
     var_Wnormal = normalize(normalMatrix(uni_mat_M)*in_normal);
     var_uv = in_uv;
 }

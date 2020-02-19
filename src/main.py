@@ -113,10 +113,13 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		size_scale = 12.5/min(H_marker, W_marker) # the width of the target measures 12.5 cm => will be 12.5 unit wide
 		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
 
+		t = n * TPF
+		
 		if ok_cTw:
-			#render_cube(cTw, K, H, W, n * TPF)
-			render_model(model,cTw, K, H, W, n * TPF)
-
+			set_P_from_camera(K, H, W)
+			set_V_from_camera(cTw, t)
+			
+		render_model(model, n * TPF)
 		# # 1/ Do the pose estimation
 		# beg = time.time()
 		# kp_frame, des_frame = detector.detectAndCompute(gray, None)

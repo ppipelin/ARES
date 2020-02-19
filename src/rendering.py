@@ -72,7 +72,7 @@ def init_shaders(shader_folder):
 	glUseProgram(program_ID)
 	glUniform3f(SP['uni_ambiant_ID'], 0.2, 0.2, 0.2)
 	glUniform3f(SP['uni_lightColor_ID'], 1, 1, 1)
-	glUniform3f(SP['uni_WlightDirection_ID'], 0, 0, 1)
+	glUniform3f(SP['uni_WlightDirection_ID'], 0, 1, 0)
 	glUniform3f(SP['uni_diffuse_ID'], 1, 1, 1)
 	glUniform1ui(SP['uni_mode_ID'], 0)
 	SP['uni_mode'] = 0
@@ -109,6 +109,7 @@ def switch_shader_type():
 	glUseProgram(SP['PID'])
 	glUniform1ui(SP['uni_mode_ID'], SP['uni_mode'])
 	glUseProgram(0)
+
 # 1/ Clears the buffers (color and depth) and DEACTIVATES depth tests (need to reactivate later!!)
 # 2/ Binds the texture and blit the given image to it
 # 3/ Sets a orthogrphic projection over the area W/H
@@ -142,7 +143,8 @@ def clear(image, H, W, y, x, textID):
 	glVertex2f(0, H)
 	glEnd()
 
-def set_projection_from_camera(K, H, W):
+def set_P_from_camera(K, H, W):
+	glUseProgram(SP['PID'])
 	"""  Set view from a camera calibration matrix. """
 	assert(SP['uni_mat_P_ID'] != -1)
 	glMatrixMode(GL_PROJECTION)
@@ -159,10 +161,11 @@ def set_projection_from_camera(K, H, W):
 	far = 100.0
 	
 	# set perspective
-	mP = glm.perspective(fovy, aspect, near, far)
+	mP = glm.perspective(fovy*0.1, aspect, near, far)
 	glUniformMatrix4fv(SP['uni_mat_P_ID'], 1, False, glm.value_ptr(mP))
 
 	glViewport(0,0,W,H)
+	glUseProgram(0)
 
 # def set_modelview_from_camera(cTw):
 	## """  Set the model view matrix from camera pose. """
@@ -206,32 +209,40 @@ def nparray_to_glm_mat(array):
 	
 	
 
-def set_modelview_from_camera(cTw):
+def set_V_from_camera(cTw, t):
+	glUseProgram(SP['PID'])
 	"""  Set the model view matrix from camera pose. """
 	assert(SP['uni_mat_V_ID'] != -1)
 
-	cv_to_gl = np.eye(4)
-	cv_to_gl[1,1] = -cv_to_gl[1,1] # Invert the y axis
-	cv_to_gl[2,2] = -cv_to_gl[2,2] # Invert the z axis
-	viewMatrix = np.dot(cv_to_gl, cTw)
+	cv_to_gl = np.zeros((4, 4))
+	
+	cv_to_gl[0, 0] = 1
+	cv_to_gl[3, 3] = 1
+	#invert the y and z axis
+	cv_to_gl[1, 1] = -1
+	cv_to_gl[2, 2] = -1
+
+	viewMatrix = np.matmul(cv_to_gl, cTw)
 	# viewMatrix[0,3] *= 0.01 # cm to m
 	# viewMatrix[1,3] *= 0.01 # cm to m
 	# viewMatrix[2,3] *= 0.01 # cm to m
 
 	viewMatrix = viewMatrix.T
 
-	V = nparray_to_glm_mat(viewMatrix)
+	V = nparray_to_glm_mat(viewMatrix)* glm.rotate(glm.mat4(), math.pi/2, glm.vec3(1, 0, 0))
+	
+
+	#V = glm.translate(glm.mat4(), glm.vec3(0, 0, -10*2))# * glm.rotate(glm.mat4(), math.pi, glm.vec3(1, 0, 0))
+	
 
 	# replace model view with the new matrix
 	glUniformMatrix4fv(SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
+	glUseProgram(0)
 
-def render_model(model, cTw, K, H,W,t):
+def render_model(model, t):
 	glUseProgram(SP['PID'])
 	glEnable(GL_DEPTH_TEST)
 	glBindTexture(GL_TEXTURE_2D, 0) 
-	
-	set_projection_from_camera(K, H, W)
-	set_modelview_from_camera(cTw)
 	
 	glEnable(GL_BLEND)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
