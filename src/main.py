@@ -117,9 +117,10 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		if ok_cTw:
 			set_P_from_camera(K, H, W)
 			set_V_from_camera(cTw, t)
-			set_M(0.4, size_scale, H_marker, W_marker)
+			set_M(1, size_scale, H_marker, W_marker)
 
 		render_model(model, n * TPF)
+		
 		# # 1/ Do the pose estimation
 		# beg = time.time()
 		# kp_frame, des_frame = detector.detectAndCompute(gray, None)
