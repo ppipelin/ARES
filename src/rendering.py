@@ -171,7 +171,6 @@ def set_M(scale, size_scale, H_marker, W_marker):
 	glUseProgram(SP['PID'])
 	H = H_marker * size_scale
 	W = W_marker * size_scale
-	#M = glm.translate(glm.scale(glm.mat4(), glm.vec3(scale, scale, scale)), glm.vec3(H, W,0)) # should work...
 	sM = glm.scale(glm.mat4(), glm.vec3(scale, -scale, scale)) 
 	tM = glm.translate(glm.mat4(), glm.vec3(W/2, 0, -H/2))
 	M = tM * sM
