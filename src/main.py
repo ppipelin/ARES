@@ -96,7 +96,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_matches = 15 #render anything only if nb_matches > min_match
-
+	min_inliers = 25
 	# iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
 	# ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
 	# cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
@@ -116,14 +116,15 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		clear(frame, H, W, y, x, textID)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		
-		ok_cTw, cTw, kp_frame, des_frame, matches, rmat, tvec = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
-
-		if ok_cTw:
+		rmat, tvec, nb_inliers = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
+		print(nb_inliers, " inliers (mininum to update Kalman filter : ", min_inliers,")")
+		if nb_inliers > min_inliers:
 			KF.fill(rmat, tvec)
-			cTw = KF.predict()
-			set_P_from_camera(K, H, W)
-			set_V_from_camera(cTw, t)
-			set_M(1, size_scale, H_marker, W_marker)
+
+		cTw = KF.predict()
+		set_P_from_camera(K, H, W)
+		set_V_from_camera(cTw, t)
+		set_M(0.3, size_scale, H_marker, W_marker)
 
 		render_model(model, n * TPF)
 		# # 1/ Do the pose estimation
@@ -222,16 +223,14 @@ def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_m
 	matches = matcher.match(des_marker, des_firstframe)
 	matches = sorted(matches, key=lambda x: x.distance)
 	if len(matches) < min_matches:
-		return False, None, kp_firstframe, des_firstframe, matches, None, None
+		return None, None,0
 	src_pts = np.float32([ np.array(kp_marker[m.queryIdx].pt + (0,))*size_marker for m in matches]).reshape(-1, 1, 3)
 	dst_pts = np.float32([kp_firstframe[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 	retval, rvec, tvec, inliers	= cv2.solvePnPRansac(src_pts, dst_pts, K,  dist, None, None, False, 100, 5.0)
 	if retval == False:
-		return False, None, kp_firstframe, des_firstframe, matches, None, None
+		return None, None,0
 	rmat, jacobian = cv2.Rodrigues(rvec)
-	ciTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
-	ciTw = np.vstack([ciTw, [0,0,0,1]])
-	return True, ciTw, kp_firstframe, des_firstframe, matches, rmat, tvec
+	return rmat, tvec, len(inliers)
 
 
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 

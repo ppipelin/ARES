@@ -41,8 +41,6 @@ class KalmanFilter:
 
         self.KF.transitionMatrix = transitionMatrix
         self.KF.measurementMatrix = measurementMatrix
-        print(self.KF.transitionMatrix)
-        print(self.KF.measurementMatrix)
 
         self.measurements = np.zeros(6)
 
@@ -57,9 +55,7 @@ class KalmanFilter:
     
     def predict(self):
         prediction = self.KF.predict()
-        print(self.measurements)
         estimated = self.KF.correct(self.measurements)
-        print(estimated)
         tvec = np.zeros(3)
         tvec[0] = estimated[0]
         tvec[1] = estimated[1]
@@ -71,7 +67,6 @@ class KalmanFilter:
         rmat = eulerAnglesToRotationMatrix(euler)
         cTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
         cTw = np.vstack([cTw, [0,0,0,1]])
-        print(cTw)
         return cTw
 
 def eulerAnglesToRotationMatrix(theta) :
