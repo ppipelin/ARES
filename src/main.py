@@ -14,11 +14,14 @@ import time
 from rendering import *
 from pose_estimation import *
 from model import *
+from filtering import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
 def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name, video_name, unmute):
 	
+	#cv2.waitKey(0)
+
 	video_path = data_folder + 'video_' + video_name + '.mp4'
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
@@ -38,7 +41,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	#angle = 0;#-np.pi/4
 	#ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
-
+	
 
 	
 	print('Pygame initilization...')
@@ -50,6 +53,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 	FPS = 30.0
 	TPF = 1.0/FPS
+	KF = KalmanFilter(TPF)
 	n = 0
 
 	print('Model loading...')
@@ -92,7 +96,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_matches = 15 #render anything only if nb_matches > min_match
-
+	min_inliers = 25
 	# iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
 	# ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
 	# cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
@@ -112,12 +116,15 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		clear(frame, H, W, y, x, textID)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		
-		ok_cTw, cTw, kp_frame, des_frame, matches = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
+		rmat, tvec, nb_inliers = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
+		print(nb_inliers, " inliers (mininum to update Kalman filter : ", min_inliers,")")
+		if nb_inliers > min_inliers:
+			KF.fill(rmat, tvec)
 
-		if ok_cTw:
-			set_P_from_camera(K, H, W)
-			set_V_from_camera(cTw, t)
-			set_M(1, size_scale, H_marker, W_marker)
+		cTw = KF.predict()
+		set_P_from_camera(K, H, W)
+		set_V_from_camera(cTw, t)
+		set_M(0.3, size_scale, H_marker, W_marker)
 
 		render_model(model, n * TPF)
 		
@@ -217,16 +224,14 @@ def compute_ciTw(K, dist, detector, matcher, gray, kp_marker, des_marker, size_m
 	matches = matcher.match(des_marker, des_firstframe)
 	matches = sorted(matches, key=lambda x: x.distance)
 	if len(matches) < min_matches:
-		return False, None, kp_firstframe, des_firstframe, matches
+		return None, None,0
 	src_pts = np.float32([ np.array(kp_marker[m.queryIdx].pt + (0,))*size_marker for m in matches]).reshape(-1, 1, 3)
 	dst_pts = np.float32([kp_firstframe[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
 	retval, rvec, tvec, inliers	= cv2.solvePnPRansac(src_pts, dst_pts, K,  dist, None, None, False, 100, 5.0)
 	if retval == False:
-		return False, None, kp_firstframe, des_firstframe, matches
+		return None, None,0
 	rmat, jacobian = cv2.Rodrigues(rvec)
-	ciTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
-	ciTw = np.vstack([ciTw, [0,0,0,1]])
-	return True, ciTw, kp_firstframe, des_firstframe, matches
+	return rmat, tvec, len(inliers)
 
 
 # From a video file path, returns a numpy array [nb frames, height , width, channels] 

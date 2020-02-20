@@ -154,7 +154,7 @@ def set_P_from_camera(K, H, W):
 
 	fx = K[0,0]
 	fy = K[1,1]
-	fovy = 2*np.arctan(0.5*H/fy)#*180/np.pi
+	fovy = 2*np.arctan(0.5*H/fy)
 	aspect = (W*fy)/(H*fx)
 	# print('fovy '+ str(fovy))
 	# print('aspect '+ str(aspect))
