@@ -71,9 +71,11 @@ def init_shaders(shader_folder):
 
 	glUseProgram(program_ID)
 	glUniform3f(SP['uni_ambiant_ID'], 0.2, 0.2, 0.2)
-	glUniform3f(SP['uni_lightColor_ID'], 1, 1, 1)
+	glUniform3f(SP['uni_lightColor_ID'], 1, 0.8, 0.6)
 	glUniform3f(SP['uni_WlightDirection_ID'], 0, 1, 0)
-	glUniform3f(SP['uni_diffuse_ID'], 1, 1, 1)
+
+	glUniform3f(SP['uni_diffuse_ID'], 0.5, 0.5, 0.5)
+	glUniform4f(SP['uni_glossy_ID'], 1, 1, 1, 50)
 	glUniform1ui(SP['uni_mode_ID'], 0)
 	SP['uni_mode'] = 0
 	glUseProgram(0)

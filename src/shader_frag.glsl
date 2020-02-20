@@ -6,13 +6,15 @@ in vec2 var_uv;
 
 layout (location = 0) out vec4 out_fragColor;
 
+uniform mat4 uni_mat_V;
+
 uniform vec3 uni_WlightDirection; 
 uniform vec3 uni_lightColor; 
 // 0 -> fresnel / 1 -> phong
 uniform uint uni_mode;
 
 uniform vec3 uni_diffuse; 
-uniform vec3 uni_glossy;
+uniform vec4 uni_glossy;
 uniform vec3 uni_ambiant;
 
 
@@ -43,11 +45,21 @@ void phong()
     vec3 res = vec3(0);
     res += uni_ambiant;
 
+    vec3 WcamPos = -uni_mat_V[3].xyz / uni_mat_V[3].w;
+    vec3 WtoView = normalize(WcamPos - var_Wposition);
+    
+
     vec3 wNormal = normalize(var_Wnormal);
+    //if(dot(wNormal, WtoView) < 0)   wNormal = -wNormal;
     vec3 Wto_light = -uni_WlightDirection;
 
-    res += uni_diffuse * max(0, dot(wNormal, Wto_light));
+    res += uni_diffuse * max(0, dot(wNormal, Wto_light)) * uni_lightColor;
 
+    vec3 glossy = uni_glossy.xyz;
+    float shininess = uni_glossy.w;
+    vec3 WRtoView = reflect(WtoView, wNormal);
+    
+    res += glossy * uni_lightColor * pow(max(0, dot(WRtoView, Wto_light)), shininess);
     out_fragColor = vec4(res, alpha);
 }
 
