@@ -172,7 +172,9 @@ def set_M(scale, size_scale, H_marker, W_marker):
 	H = H_marker * size_scale
 	W = W_marker * size_scale
 	#M = glm.translate(glm.scale(glm.mat4(), glm.vec3(scale, scale, scale)), glm.vec3(H, W,0)) # should work...
-	M = glm.scale(glm.mat4(), glm.vec3(scale, scale, scale))
+	sM = glm.scale(glm.mat4(), glm.vec3(scale, -scale, scale)) 
+	tM = glm.translate(glm.mat4(), glm.vec3(W/2, 0, -H/2))
+	M = tM * sM
 	glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
 	glUseProgram(0)
 
