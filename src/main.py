@@ -41,7 +41,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	#angle = 0;#-np.pi/4
 	#ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
-	
+	renderer = Renderer()
 
 	
 	print('Pygame initilization...')
@@ -49,7 +49,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	pygame.display.set_caption('ARES')
 	window = pygame.display.set_mode((W,H), DOUBLEBUF | OPENGL)
 	
-	init_shaders(shader_folder)
+	renderer.init_shaders(shader_folder)
 
 	FPS = 30.0
 	TPF = 1.0/FPS
@@ -62,7 +62,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	model.load_from_obj(model_path+'model.obj')
 	
 	print('Background video texture initialization...')
-	[textID, y, x] = init_background_texture(H, W)
+	[textID, y, x] = renderer.init_background_texture(H, W)
 
 	
 	print('Detector creation and feature detection on model...')
@@ -113,20 +113,21 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		t = n * TPF
 
 		frame = video[n,:,:,:]
-		clear(frame, H, W, y, x, textID)
+		renderer.clear(frame, H, W, y, x, textID)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		
 		rmat, tvec, nb_inliers = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
-		print(nb_inliers, " inliers (mininum to update Kalman filter : ", min_inliers,")")
+		if unmute:
+			print(nb_inliers, " inliers (mininum to update Kalman filter : ", min_inliers,")")
 		if nb_inliers > min_inliers:
 			KF.fill(rmat, tvec)
 
 		cTw = KF.predict()
-		set_P_from_camera(K, H, W)
-		set_V_from_camera(cTw, t)
-		set_M(0.3, size_scale, H_marker, W_marker)
+		renderer.set_P_from_camera(K, H, W)
+		renderer.set_V_from_camera(cTw, t)
+		renderer.set_M(1, size_scale, H_marker, W_marker)
 
-		render_model(model, n * TPF)
+		renderer.render_model(model, n * TPF)
 		
 		# # 1/ Do the pose estimation
 		# beg = time.time()
