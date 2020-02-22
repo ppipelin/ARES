@@ -6,7 +6,7 @@ in vec2 var_uv;
 
 layout (location = 0) out vec4 out_fragColor;
 
-uniform mat4 uni_mat_V;
+uniform mat4 V;
 
 uniform vec3 uni_WlightDirection; 
 uniform vec3 uni_lightColor; 
@@ -45,7 +45,7 @@ void phong()
     vec3 res = vec3(0);
     res += uni_ambiant;
 
-    vec3 WcamPos = -uni_mat_V[3].xyz / uni_mat_V[3].w;
+    vec3 WcamPos = -V[3].xyz / V[3].w;
     vec3 WtoView = normalize(WcamPos - var_Wposition);
     
 

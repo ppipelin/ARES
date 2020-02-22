@@ -49,7 +49,18 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	pygame.display.set_caption('ARES')
 	window = pygame.display.set_mode((W,H), DOUBLEBUF | OPENGL)
 	
-	renderer.init_shaders(shader_folder)
+	SP = renderer.init_shaders(shader_folder, [
+		('vert.glsl', GL_VERTEX_SHADER), 
+		('frag.glsl', GL_FRAGMENT_SHADER),
+		], GL_TRIANGLES)
+	SP = renderer.init_attrib_uni(SP, ['in_position', 'in_normal', 'in_uv'], [
+		('uni_WlightDirection', '3f', (0, 1, 0)),
+		('uni_lightColor', '3f', (1, 1, 1)),
+		('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
+		('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
+		('uni_glossy', '4f', (1, 1, 1, 100)),
+		('uni_mode', '1ui', 0),
+	])
 
 	FPS = 30.0
 	TPF = 1.0/FPS
@@ -127,7 +138,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		renderer.set_V_from_camera(cTw, t)
 		renderer.set_M(1, size_scale, H_marker, W_marker)
 
-		renderer.render_model(model, n * TPF)
+		renderer.render_model(model, n * TPF, SP)
 		
 		# # 1/ Do the pose estimation
 		# beg = time.time()
@@ -205,7 +216,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		time.sleep(max(0,TPF - delta))
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-				switch_shader_type()		
+				renderer.switch_shader_type(SP)		
 			elif event.type == pygame.QUIT:
 				pygame.display.quit()
 				pygame.quit()

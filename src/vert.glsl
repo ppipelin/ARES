@@ -8,9 +8,9 @@ out vec3 var_Wposition;
 out vec3 var_Wnormal;
 out vec2 var_uv;
 // Définition des uniforms
-uniform mat4 uni_mat_V;
-uniform mat4 uni_mat_M;
-uniform mat4 uni_mat_P;
+uniform mat4 V;
+uniform mat4 M;
+uniform mat4 P;
 // Fonction calculant la matrice de transformation des normales
 mat3 normalMatrix(in mat4 transform)
 {
@@ -20,10 +20,10 @@ mat3 normalMatrix(in mat4 transform)
 // Le programme principal
 void main()
 {
-    mat4 MVP = uni_mat_P * uni_mat_V * uni_mat_M;
+    mat4 MVP = P * V * M;
     gl_Position = MVP * vec4(in_position, 1.0);
-    vec4 WpositionH = (uni_mat_M * vec4(in_position, 1.0));
+    vec4 WpositionH = (M * vec4(in_position, 1.0));
     var_Wposition = WpositionH.xyz / WpositionH.w;
-    var_Wnormal = normalize(normalMatrix(uni_mat_M)*in_normal);
+    var_Wnormal = normalize(normalMatrix(M)*in_normal);
     var_uv = in_uv;
 }

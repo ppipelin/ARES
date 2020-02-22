@@ -7,8 +7,8 @@ layout (line_strip, max_vertices=2) out;
 in vec3 var_Wposition[3];
 in vec3 var_Wnormal[3];
 
-uniform mat4 uni_mat_V;
-uniform mat4 uni_mat_P;
+uniform mat4 V;
+uniform mat4 P;
 uniform vec3 uni_WlightDirection; 
 
 // Fonction calculant la matrice de transformation des normales
@@ -26,7 +26,7 @@ void main()
 
     vec3 point1 = point;
     vec3 point2 = point + normal;
-    mat4 VP = uni_mat_P * uni_mat_V;
+    mat4 VP = P * V;
     gl_Position = VP * vec4(point1, 1);
     emitVertex();
     gl_Position = VP * vec4(point2, 1);

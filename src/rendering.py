@@ -7,94 +7,101 @@ from primitives import *
 from model import *
 import glm
 
+def strid(name):
+	return name + '_ID'
+
 class Renderer:
 
 
-	def __init__(self):
-		self.SP = {}
+	def __init__(self, use_debug=False):
+		self.M = glm.identity(glm.mat4x4)
+		self.V = glm.identity(glm.mat4x4)
+		self.P = glm.identity(glm.mat4x4)
 
+		self.update_M = True
+		self.update_V = True
+		self.update_P = True
+	
 
-	def init_shaders(self, shader_folder):
-		vert_filepath = shader_folder + 'shader_vert.glsl'
-		frag_filepath = shader_folder + 'shader_frag.glsl'
-		vert_code = open(vert_filepath, 'r').read()
-		frag_code = open(frag_filepath, 'r').read()
-
-		vert_ID = glCreateShader(GL_VERTEX_SHADER)
-		glShaderSource(vert_ID, vert_code)
-		glCompileShader(vert_ID)
-		if not glGetShaderiv(vert_ID, GL_COMPILE_STATUS):
-			error = glGetShaderInfoLog(vert_ID)
-			print(error)
-			raise Exception('Failed to compile the vertex shader!', error)
-
-		frag_ID = glCreateShader(GL_FRAGMENT_SHADER)
-		glShaderSource(frag_ID, frag_code)
-		glCompileShader(frag_ID)
-		if not glGetShaderiv(frag_ID, GL_COMPILE_STATUS):
-			error = glGetShaderInfoLog(frag_ID)
-			print(error)
-			raise Exception('Failed to compile the fragment shader!', error)
-
+	def init_shaders(self, folder, shaders, GL_PRIMITIVE_TARGET):
 		program_ID = glCreateProgram()
-		glAttachShader(program_ID, vert_ID)
-		glAttachShader(program_ID, frag_ID)
-		glLinkProgram(program_ID)
+		SP = {'PID': program_ID, 'target': GL_PRIMITIVE_TARGET}
+		
 
+		for shader_name, GL_SHADER_TYPE in shaders:
+			shader_filepath = folder + shader_name
+			shader_code = open(shader_filepath, 'r').read()
+			shader_ID = glCreateShader(GL_SHADER_TYPE)
+			glShaderSource(shader_ID, shader_code)
+			glCompileShader(shader_ID)
+			if not glGetShaderiv(shader_ID, GL_COMPILE_STATUS):
+				error = glGetShaderInfoLog(shader_ID)
+				print('Failed to compile the shader ' + folder + shader_name)
+				print(error)
+				raise Exception('Failed to compile a shader!')
+			
+			glAttachShader(program_ID, shader_ID)
+
+		glLinkProgram(program_ID)
 		if not glGetProgramiv(program_ID, GL_LINK_STATUS):
 			error = glGetProgramInfoLog(program_ID)
 			print(error)
 			raise Exception('Failed to link the shader program!', error)
 
-		self.SP = {
-			'vert_ID': vert_ID, 
-			'frag_ID': frag_ID, 
-			'PID': program_ID,
-			}
-
-		self.addAttribute('in_position')
-		self.addAttribute('in_normal')
-		self.addAttribute('in_uv')
-
-		self.addUniform('uni_mat_V')
-		self.addUniform('uni_mat_P')
-		self.addUniform('uni_mat_M')
-
-		self.addUniform('uni_WlightDirection')
-		self.addUniform('uni_lightColor')
-
-		self.addUniform('uni_mode')
-
-		self.addUniform('uni_diffuse')
-		self.addUniform('uni_glossy')
-		self.addUniform('uni_ambiant')
 		
-		print('shader program: ', self.SP)
+		
+		print('shader program: ', SP)
 		print('init shader: done!')
 
-		glUseProgram(program_ID)
-		glUniform3f(self.SP['uni_ambiant_ID'], 0.2, 0.2, 0.2)
-		glUniform3f(self.SP['uni_lightColor_ID'], 1, 0.8, 0.6)
-		glUniform3f(self.SP['uni_WlightDirection_ID'], 0, 1, 0)
+		return SP
 
-		glUniform3f(self.SP['uni_diffuse_ID'], 0.5, 0.5, 0.5)
-		glUniform4f(self.SP['uni_glossy_ID'], 1, 1, 1, 50)
-		glUniform1ui(self.SP['uni_mode_ID'], 0)
-		self.SP['uni_mode'] = 0
+		
+	def init_attrib_uni(self, SP, attribs, unis):
+		glUseProgram(SP['PID'])
+
+		for attrib_name in attribs:
+			id = self.addAttribute(attrib_name, SP)
+			SP[strid(attrib_name)] = id
+
+		for uni_name, utype, value in unis:
+			id = self.addUniform(uni_name, SP)
+			SP[uni_name] = {'value': value, 'utype': utype, 'ID': id}
+			if id == -1:
+				print('Warning, the uniform ' + uni_name + ' is not recognized by the SP ' + str(SP['PID']))
+			else:
+				if utype == '3f':
+					glUniform3f(id, value[0], value[1], value[2])
+				elif utype == '4f':
+					glUniform4f(id, value[0], value[1], value[2], value[3])
+				elif utype == '1ui':
+					glUniform1ui(id, value)
+				else:
+					raise('The uniform type ' + utype + ' is not recognized! And the value is ' + str(value))
+
+		P_ID = self.addUniform('P', SP)
+		V_ID = self.addUniform('V', SP)
+		M_ID = self.addUniform('M', SP)
+
+		SP['P_ID'] = P_ID
+		SP['V_ID'] = V_ID
+		SP['M_ID'] = M_ID
+
 		glUseProgram(0)
 
+		return SP
 
-	def addAttribute(self, attrib_name):
-		self.SP[attrib_name+'_ID'] = glGetAttribLocation(self.SP['PID'], attrib_name)
-		if self.SP[attrib_name+'_ID'] == -1:
-			print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'"'))
-		return self.SP[attrib_name+'_ID']
 
-	def addUniform(self, uni_name):
-		self.SP[uni_name+'_ID'] = glGetUniformLocation(self.SP['PID'], uni_name)
-		if self.SP[uni_name+'_ID'] == -1:
-			print(Warning('Failed to get the ID of the Uniform "'+uni_name+'"'))
-		return self.SP[uni_name+'_ID']
+	def addAttribute(self, attrib_name, SP):
+		id = glGetAttribLocation(SP['PID'], attrib_name)
+		if id == -1:
+			print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'" of the program ' + str(SP['PID'])))
+		return id
+
+	def addUniform(self, uni_name, SP):
+		id = glGetUniformLocation(SP['PID'], uni_name)
+		if id == -1:
+			print(Warning('Failed to get the ID of the Uniform "'+uni_name+'" of the program ' + str(SP['PID'])))
+		return id
 
 	# Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
 	def init_background_texture(self, H, W):
@@ -107,10 +114,10 @@ class Renderer:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER , GL_NEAREST)
 		return [textID, H/Hpow2, W/Wpow2]
 
-	def switch_shader_type(self):
-		self.SP['uni_mode'] = (self.SP['uni_mode'] + 1) % 3
-		glUseProgram(self.SP['PID'])
-		glUniform1ui(self.SP['uni_mode_ID'], self.SP['uni_mode'])
+	def switch_shader_type(self, SP):
+		SP['uni_mode']['value'] = (SP['uni_mode']['value'] + 1) % 3
+		glUseProgram(SP['PID'])
+		glUniform1ui(SP['uni_mode']['ID'], SP['uni_mode']['value'])
 		glUseProgram(0)
 
 	# 1/ Clears the buffers (color and depth) and DEACTIVATES depth tests (need to reactivate later!!)
@@ -147,10 +154,7 @@ class Renderer:
 		glEnd()
 
 	def set_P_from_camera(self, K, H, W):
-		glUseProgram(self.SP['PID'])
 		"""  Set view from a camera calibration matrix. """
-		glMatrixMode(GL_PROJECTION)
-		glLoadIdentity()
 
 		fx = K[0,0]
 		fy = K[1,1]
@@ -163,21 +167,18 @@ class Renderer:
 		far = 100.0
 		
 		# set perspective
-		mP = glm.perspective(fovy, aspect, near, far)
-		glUniformMatrix4fv(self.SP['uni_mat_P_ID'], 1, False, glm.value_ptr(mP))
+		self.P = glm.perspective(fovy, aspect, near, far)
+		self.update_P = True
 
 		glViewport(0,0,W,H)
-		glUseProgram(0)
 
 	def set_M(self, scale, size_scale, H_marker, W_marker):
-		glUseProgram(self.SP['PID'])
 		H = H_marker * size_scale
 		W = W_marker * size_scale
 		sM = glm.scale(glm.mat4(), glm.vec3(scale, -scale, scale)) 
 		tM = glm.translate(glm.mat4(), glm.vec3(W/2, 0, -H/2))
-		M = tM * sM
-		glUniformMatrix4fv(self.SP['uni_mat_M_ID'], 1, False, glm.value_ptr(M))
-		glUseProgram(0)
+		self.M = tM * sM
+		self.update_M = True
 
 	def nparray_to_glm_mat(self, array):
 		res = glm.mat4()
@@ -190,7 +191,6 @@ class Renderer:
 		
 
 	def set_V_from_camera(self, cTw, t):
-		glUseProgram(self.SP['PID'])
 		"""  Set the model view matrix from camera pose. """
 
 		cv_to_gl = np.zeros((4, 4))
@@ -208,18 +208,25 @@ class Renderer:
 
 		viewMatrix = viewMatrix.T
 
-		V = self.nparray_to_glm_mat(viewMatrix) * glm.rotate(glm.mat4(), math.pi/2, glm.vec3(1, 0, 0))
-		
-
+		self.V = self.nparray_to_glm_mat(viewMatrix) * glm.rotate(glm.mat4(), math.pi/2, glm.vec3(1, 0, 0))
 		#V = glm.translate(glm.mat4(), glm.vec3(0, 0, -10*2))# * glm.rotate(glm.mat4(), math.pi, glm.vec3(1, 0, 0))
+
+		self.update_V = True
 		
 
-		# replace model view with the new matrix
-		glUniformMatrix4fv(self.SP['uni_mat_V_ID'], 1, False, glm.value_ptr(V))
-		glUseProgram(0)
+	def render_model(self, model, t, SP):
+		glUseProgram(SP['PID'])
 
-	def render_model(self, model, t):
-		glUseProgram(self.SP['PID'])
+		if SP['M_ID'] != -1 and self.update_M:
+			glUniformMatrix4fv(SP['M_ID'], 1, GL_FALSE, glm.value_ptr(self.M))
+			self.update_M = False
+		if SP['V_ID'] != -1 and self.update_V:
+			glUniformMatrix4fv(SP['V_ID'], 1, GL_FALSE, glm.value_ptr(self.V))
+			self.update_V = False
+		if SP['P_ID'] != -1 and self.update_P:
+			glUniformMatrix4fv(SP['P_ID'], 1, GL_FALSE, glm.value_ptr(self.P))
+			self.update_P = False
+
 		glEnable(GL_DEPTH_TEST)
 		glBindTexture(GL_TEXTURE_2D, 0) 
 		
@@ -229,7 +236,7 @@ class Renderer:
 		# glCullFace(GL_FRONT)
 		# glScale(0.1,0.1,0.1)
 		# glRotate(-90,1,0,0)
-		model.render(self.SP)
+		model.render(SP)
 		#glDisable(GL_CULL_FACE)
 		
 		# glLoadIdentity()

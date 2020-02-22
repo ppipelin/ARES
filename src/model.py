@@ -48,7 +48,7 @@ class Model:
         if False and self.textured:
             glBindTexture(GL_TEXTURE_2D, self.texture)
             glEnable(GL_TEXTURE_2D)
-        glDrawArrays(GL_TRIANGLES, 0, len(self.vertex_index))
+        glDrawArrays(SP['target'], 0, len(self.vertex_index))
 
 
     def load_from_obj(self, obj_file, tex_file=''):
