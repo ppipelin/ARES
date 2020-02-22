@@ -49,18 +49,33 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	pygame.display.set_caption('ARES')
 	window = pygame.display.set_mode((W,H), DOUBLEBUF | OPENGL)
 	
+	light_direction = (0, 1, 0)
+
 	SP = renderer.init_shaders(shader_folder, [
 		('vert.glsl', GL_VERTEX_SHADER), 
 		('frag.glsl', GL_FRAGMENT_SHADER),
 		], GL_TRIANGLES)
 	SP = renderer.init_attrib_uni(SP, ['in_position', 'in_normal', 'in_uv'], [
-		('uni_WlightDirection', '3f', (0, 1, 0)),
+		('uni_WlightDirection', '3f', light_direction),
 		('uni_lightColor', '3f', (1, 1, 1)),
 		('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
 		('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
 		('uni_glossy', '4f', (1, 1, 1, 100)),
 		('uni_mode', '1ui', 0),
 	])
+	print('SP: ', str(SP))
+
+	debug_shader = False
+	if debug_shader:
+		DSP = renderer.init_shaders(shader_folder, [
+			('vert.glsl', GL_VERTEX_SHADER),
+			('geo.glsl', GL_GEOMETRY_SHADER),
+			('line_frag.glsl', GL_FRAGMENT_SHADER),
+		], GL_TRIANGLES)
+		DSP = renderer.init_attrib_uni(DSP, ['in_position', 'in_normal', 'in_uv'], [
+			('uni_WlightDirection', '3f', light_direction),
+		])
+		print('DSP: ', str(DSP))
 
 	FPS = 30.0
 	TPF = 1.0/FPS
@@ -139,7 +154,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		renderer.set_M(1, size_scale, H_marker, W_marker)
 
 		renderer.render_model(model, n * TPF, SP)
-		
+		if debug_shader:
+			renderer.render_model(model, n*TPF, DSP)
+		renderer.reset_program()
 		# # 1/ Do the pose estimation
 		# beg = time.time()
 		# kp_frame, des_frame = detector.detectAndCompute(gray, None)

@@ -126,22 +126,22 @@ class Renderer:
 	# 4/ draw a quad in the camera field (0,0,W,H) with x and y as the maximum uv texture coordinates
 	# => sets the background with the given image
 	def clear(self, image, H, W, y, x, textID):
-		#/1
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+		#/1 clear frame buffer and Z buffer
+		
 		glDisable(GL_DEPTH_TEST)
 
-		#/2
+		#/2 send the image texture to the GPU
 		glEnable(GL_TEXTURE_2D)
 		glBindTexture(GL_TEXTURE_2D, textID) 
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, W, H, GL_RGB, GL_UNSIGNED_BYTE, image)
 		
-		#/3
+		#/3 Load a matrix for the rendering
 		glMatrixMode (GL_PROJECTION)
 		glLoadIdentity()
 		gluOrtho2D(0, W, H, 0)
 		glMatrixMode(GL_MODELVIEW)
 		#glLoadIdentity()
-		#/4
+		#/4 render a quad with the previously binded texture
 		glBegin(GL_QUADS)
 		glTexCoord2f(0, 0)
 		glVertex2f(0, 0)
@@ -152,6 +152,7 @@ class Renderer:
 		glTexCoord2f(0, y)
 		glVertex2f(0, H)
 		glEnd()
+		glClear(GL_DEPTH_BUFFER_BIT)
 
 	def set_P_from_camera(self, K, H, W):
 		"""  Set view from a camera calibration matrix. """
@@ -228,19 +229,19 @@ class Renderer:
 			self.update_P = False
 
 		glEnable(GL_DEPTH_TEST)
-		glBindTexture(GL_TEXTURE_2D, 0) 
-		
-		glEnable(GL_BLEND)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+		# glDepthFunc(GL_LESS)
+		# glEnable(GL_BLEND)
+		# glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		# glEnable(GL_CULL_FACE)
 		# glCullFace(GL_FRONT)
-		# glScale(0.1,0.1,0.1)
-		# glRotate(-90,1,0,0)
+
 		model.render(SP)
 		#glDisable(GL_CULL_FACE)
-		
-		# glLoadIdentity()
-		glDisable(GL_BLEND)
 
-		glColor(255.0, 255.0, 255.0, 255.0)
+		glDisable(GL_BLEND)
+		glDisable(GL_DEPTH_TEST)
+
+		
+
+	def reset_program(self):
 		glUseProgram(0)

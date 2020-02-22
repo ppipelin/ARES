@@ -1,8 +1,10 @@
 import numpy as np
 from OpenGL.GL import *
+from OpenGL.GLU import *
 from PIL import Image
 import glm
 import math
+import sys
 
 
 class Model:
@@ -23,24 +25,24 @@ class Model:
         #self.M = glm.scale(glm.mat4(), glm.vec3(1, 1, 1))
 
     def render(self, SP):
-        
-        #glUniformMatrix4fv(SP['uni_mat_M_ID'], 1, False, glm.value_ptr(self.M))
-
         glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
 
         # positions
         in_position_ID = SP['in_position_ID']
+        #print(in_position_ID)
         if in_position_ID != -1:
             glVertexAttribPointer(in_position_ID, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(0))
             glEnableVertexAttribArray(in_position_ID)
         # normals
         in_normal_ID = SP['in_normal_ID']
+        #print(in_normal_ID)
         if in_normal_ID != -1:
             glVertexAttribPointer(in_normal_ID, 3, GL_FLOAT, GL_FALSE, 3 * 4, ctypes.c_void_p(self.normal_offset))
             glEnableVertexAttribArray(in_normal_ID)
 
         # texture uv 
         in_uv_ID = SP['in_uv_ID']
+        #print(in_uv_ID)
         if in_uv_ID != -1:
             glVertexAttribPointer(in_uv_ID, 2, GL_FLOAT, GL_FALSE, 2 * 4, ctypes.c_void_p(self.uv_offset))
             glEnableVertexAttribArray(in_uv_ID)
@@ -48,7 +50,11 @@ class Model:
         if False and self.textured:
             glBindTexture(GL_TEXTURE_2D, self.texture)
             glEnable(GL_TEXTURE_2D)
+        
         glDrawArrays(SP['target'], 0, len(self.vertex_index))
+        
+        
+
 
 
     def load_from_obj(self, obj_file, tex_file=''):
