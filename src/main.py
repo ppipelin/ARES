@@ -65,7 +65,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	])
 	print('SP: ', str(SP))
 
-	debug_shader = False
+	debug_shader = True
 	if debug_shader:
 		DSP = renderer.init_shaders(shader_folder, [
 			('vert.glsl', GL_VERTEX_SHADER),
@@ -153,6 +153,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		renderer.set_V_from_camera(cTw, t)
 		renderer.set_M(1, size_scale, H_marker, W_marker)
 
+		
 		renderer.render_model(model, n * TPF, SP)
 		if debug_shader:
 			renderer.render_model(model, n*TPF, DSP)

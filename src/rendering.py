@@ -218,13 +218,13 @@ class Renderer:
 	def render_model(self, model, t, SP):
 		glUseProgram(SP['PID'])
 
-		if SP['M_ID'] != -1 and self.update_M:
+		if SP['M_ID'] != -1:
 			glUniformMatrix4fv(SP['M_ID'], 1, GL_FALSE, glm.value_ptr(self.M))
 			self.update_M = False
-		if SP['V_ID'] != -1 and self.update_V:
+		if SP['V_ID'] != -1:
 			glUniformMatrix4fv(SP['V_ID'], 1, GL_FALSE, glm.value_ptr(self.V))
 			self.update_V = False
-		if SP['P_ID'] != -1 and self.update_P:
+		if SP['P_ID'] != -1:
 			glUniformMatrix4fv(SP['P_ID'], 1, GL_FALSE, glm.value_ptr(self.P))
 			self.update_P = False
 
