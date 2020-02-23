@@ -26,6 +26,10 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	print('loading video from path : ' +  video_path +'...')	
 	video= load_video(video_path)
 	[N, H, W, C] =  video.shape
+	mean_video = np.mean(video, axis=0, dtype=np.float32)
+	mean_video = mean_video.astype(np.uint8)
+	mean_video = cv2.cvtColor(mean_video,cv2.COLOR_RGB2BGR)
+	cv2.imshow('mean', mean_video)
 	# N = N//16
 	if(save is not 'nosave'):
 		video_to_save = np.empty((0, H, W, 3), dtype=np.uint8)
