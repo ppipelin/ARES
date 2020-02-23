@@ -127,6 +127,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	#matcher = cv2.FlannBasedMatcher(flann_params, {})
 	min_matches = 15 #render anything only if nb_matches > min_match
 	min_inliers = 25
+	filtering_activated = True
 	# iframe = cv2.cvtColor(video[n,:,:,:], cv2.COLOR_RGB2GRAY)
 	# ok_ciTw, ciTw, kp_iframe, des_iframe, imatches = compute_ciTw(K, dist, detector, matcher, iframe, kp_marker, des_marker, min(H_marker, W_marker), min_matches)
 	# cv2.drawKeypoints(iframe,kp_iframe,iframe) 	# par ref
@@ -138,7 +139,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	while True:
 		if unmute:
 			print('#' * 100)
-			print('frame ' ,n)
+			print('frame ' , n)
 		begin_t = time.time()
 		t = n * TPF
 
@@ -152,7 +153,12 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		if nb_inliers > min_inliers:
 			KF.fill(rmat, tvec)
 
-		cTw = KF.predict()
+		if filtering_activated == True:
+			cTw = KF.predict()
+		else:
+			cTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
+			cTw = np.vstack([cTw, [0,0,0,1]])
+		
 		renderer.set_P_from_camera(K, H, W)
 		renderer.set_V_from_camera(cTw, t)
 		renderer.set_M(1, size_scale, H_marker, W_marker)
@@ -239,6 +245,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
 				renderer.switch_shader_type(SP)		
+			elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
+				filtering_activated = not filtering_activated
+				print("filtering :" , filtering_activated)
 			elif event.type == pygame.QUIT:
 				pygame.display.quit()
 				pygame.quit()
