@@ -45,12 +45,14 @@ void phong()
     vec3 res = vec3(0);
     res += uni_ambiant;
 
-    vec3 WcamPos = -V[3].xyz / V[3].w;
+    mat4 invV = inverse(V);
+    vec3 WcamPos = invV[3].xyz / invV[3].w;
     vec3 WtoView = normalize(WcamPos - var_Wposition);
     
 
     vec3 wNormal = normalize(var_Wnormal);
-    //if(dot(wNormal, WtoView) < 0)   wNormal = -wNormal;
+    
+    
     vec3 Wto_light = -uni_WlightDirection;
 
     res += uni_diffuse * max(0, dot(wNormal, Wto_light)) * uni_lightColor;
@@ -59,7 +61,7 @@ void phong()
     float shininess = uni_glossy.w;
     vec3 WRtoView = reflect(WtoView, wNormal);
     
-    res += glossy * uni_lightColor * pow(max(0, dot(WRtoView, Wto_light)), shininess);
+    res += glossy * uni_lightColor * pow(max(0, dot(WRtoView, -Wto_light)), shininess);
     out_fragColor = vec4(res, alpha);
 }
 

@@ -60,12 +60,12 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		('uni_lightColor', '3f', (1, 1, 1)),
 		('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
 		('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
-		('uni_glossy', '4f', (1, 1, 1, 100)),
+		('uni_glossy', '4f', (1, 1, 1, 1000)),
 		('uni_mode', '1ui', 0),
 	])
 	print('SP: ', str(SP))
 
-	debug_shader = True
+	debug_shader = False
 	if debug_shader:
 		DSP = renderer.init_shaders(shader_folder, [
 			('vert.glsl', GL_VERTEX_SHADER),
