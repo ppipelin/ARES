@@ -40,12 +40,9 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	v0 = H/2#229.73#
 	coords0 = np.array((u0,v0))
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
-	Kinv = np.linalg.inv(K)
 	dist = np.array([[ 0.12740911, -0.37299138, -0.00393397,  0.000759 ,   0.43353899]])
-	#angle = 0;#-np.pi/4
-	#ciTw = np.matrix([[1,0,0,u0],[0, np.cos(angle), -np.sin(angle), v0],[0, np.sin(angle), np.cos(angle), -F/8], [0,0,0,1]])
 	
-	renderer = Renderer()
+	renderer = Renderer(H, W)
 
 	
 	print('Pygame initilization...')
@@ -55,31 +52,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	
 	light_direction = (0, 1, 0)
 
-	SP = renderer.init_shaders(shader_folder, [
-		('vert.glsl', GL_VERTEX_SHADER), 
-		('frag.glsl', GL_FRAGMENT_SHADER),
-		], GL_TRIANGLES)
-	SP = renderer.init_attrib_uni(SP, ['in_position', 'in_normal', 'in_uv'], [
-		('uni_WlightDirection', '3f', light_direction),
-		('uni_lightColor', '3f', (1, 1, 1)),
-		('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
-		('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
-		('uni_glossy', '4f', (1, 1, 1, 1000)),
-		('uni_mode', '1ui', 0),
-	])
-	print('SP: ', str(SP))
-
-	debug_shader = False
-	if debug_shader:
-		DSP = renderer.init_shaders(shader_folder, [
-			('vert.glsl', GL_VERTEX_SHADER),
-			('geo.glsl', GL_GEOMETRY_SHADER),
-			('line_frag.glsl', GL_FRAGMENT_SHADER),
-		], GL_TRIANGLES)
-		DSP = renderer.init_attrib_uni(DSP, ['in_position', 'in_normal', 'in_uv'], [
-			('uni_WlightDirection', '3f', light_direction),
-		])
-		print('DSP: ', str(DSP))
+	renderer.init_shader_data(shader_folder, light_direction)
 
 	FPS = 30.0
 	TPF = 1.0/FPS
@@ -92,7 +65,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	model.load_from_obj(model_path+'model.obj')
 	
 	print('Background video texture initialization...')
-	[textID, y, x] = renderer.init_background_texture(H, W)
+	renderer.init_background_texture()
 
 	
 	print('Detector creation and feature detection on model...')
@@ -144,7 +117,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		t = n * TPF
 
 		frame = video[n,:,:,:]
-		renderer.clear(frame, H, W, y, x, textID)
+		renderer.clear(frame)
 		gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 		
 		rmat, tvec, nb_inliers = compute_ciTw(K, dist, detector, matcher, frame, kp_marker, des_marker,size_scale, min_matches)
@@ -159,14 +132,14 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 			cTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
 			cTw = np.vstack([cTw, [0,0,0,1]])
 		
-		renderer.set_P_from_camera(K, H, W)
-		renderer.set_V_from_camera(cTw, t)
+		renderer.set_P_from_camera(K)
+		renderer.set_V_from_camera(cTw)
 		renderer.set_M(1, size_scale, H_marker, W_marker)
 
 		
-		renderer.render_model(model, n * TPF, SP)
-		if debug_shader:
-			renderer.render_model(model, n*TPF, DSP)
+		renderer.render_model(model, t)
+		# if debug_shader:
+		# 	renderer.render_model(model, n*TPF)
 		renderer.reset_program()
 		# # 1/ Do the pose estimation
 		# beg = time.time()
@@ -244,7 +217,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 		time.sleep(max(0,TPF - delta))
 		for event in pygame.event.get():
 			if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-				renderer.switch_shader_type(SP)		
+				renderer.switch_shader_type()		
 			elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
 				filtering_activated = not filtering_activated
 				print("filtering :" , filtering_activated)

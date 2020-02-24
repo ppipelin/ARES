@@ -10,10 +10,6 @@ class KalmanFilter:
         self.KF.measurementNoiseCov = 1e-4 * np.identity(6, np.float64)
         self.KF.errorCovPost = np.identity(18, np.float64)
 
-        print(self.KF.processNoiseCov)
-        print(self.KF.measurementNoiseCov)
-        print(self.KF.errorCovPost)
-
         measurementMatrix = self.KF.measurementMatrix.copy()
         transitionMatrix = self.KF.transitionMatrix.copy()
 
