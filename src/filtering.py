@@ -5,9 +5,14 @@ import numpy as np
 class KalmanFilter:
     def __init__(self, dt):
         self.KF = cv2.KalmanFilter(18, 6, 0, cv2.CV_64F)
-        cv2.setIdentity(self.KF.processNoiseCov, 1e-5)
-        cv2.setIdentity(self.KF.measurementNoiseCov, 1e-4)
-        cv2.setIdentity(self.KF.errorCovPost, 1)
+
+        self.KF.processNoiseCov = 1e-5 * np.identity(18, np.float64)
+        self.KF.measurementNoiseCov = 1e-4 * np.identity(6, np.float64)
+        self.KF.errorCovPost = np.identity(18, np.float64)
+
+        print(self.KF.processNoiseCov)
+        print(self.KF.measurementNoiseCov)
+        print(self.KF.errorCovPost)
 
         measurementMatrix = self.KF.measurementMatrix.copy()
         transitionMatrix = self.KF.transitionMatrix.copy()

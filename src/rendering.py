@@ -161,8 +161,6 @@ class Renderer:
 		fy = K[1,1]
 		fovy = 2*np.arctan(0.5*H/fy)
 		aspect = (W*fy)/(H*fx)
-		# print('fovy '+ str(fovy))
-		# print('aspect '+ str(aspect))
 		# define the near and far clipping planes
 		near = 0.1
 		far = 100.0
@@ -203,9 +201,6 @@ class Renderer:
 		cv_to_gl[2, 2] = -1
 
 		viewMatrix = np.dot(cv_to_gl, cTw)
-		# viewMatrix[0,3] *= 0.01 # cm to m
-		# viewMatrix[1,3] *= 0.01 # cm to m
-		# viewMatrix[2,3] *= 0.01 # cm to m
 
 		viewMatrix = viewMatrix.T
 
