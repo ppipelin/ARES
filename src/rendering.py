@@ -26,7 +26,6 @@ class Renderer:
 		self.W = W
 		self.x = 0
 		self.y = 0
-		self.background_texture_ID = -1
 		self.SP = []
 		self.use_debug = use_debug
 
@@ -54,7 +53,9 @@ class Renderer:
 				('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
 				('uni_glossy', '4f', (1, 1, 1, 1000)),
 				('uni_mode', '1ui', 0),
+				('uni_resolution', '2i', (self.W, self.H)),
 			])
+		
 
 
 	def init_shaders(self, folder, shaders, GL_PRIMITIVE_TARGET):
@@ -97,7 +98,9 @@ class Renderer:
 			if id == -1:
 				print('Warning, the uniform ' + uni_name + ' is not recognized by the SP ' + str(self.SP['PID']))
 			else:
-				if utype == '3f':
+				if utype == '2i':
+					glUniform2i(id, value[0], value[1])
+				elif utype == '3f':
 					glUniform3f(id, value[0], value[1], value[2])
 				elif utype == '4f':
 					glUniform4f(id, value[0], value[1], value[2], value[3])
@@ -130,9 +133,9 @@ class Renderer:
 		return id
 
 	# Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
-	def init_background_texture(self):
-		self.background_texture_ID = glGenTextures(1)
-		glBindTexture(GL_TEXTURE_2D, self.background_texture_ID) 
+	def init_textures(self):
+		self.SP['background_texture_ID'] = glGenTextures(1)
+		glBindTexture(GL_TEXTURE_2D, self.SP['background_texture_ID']) 
 		Hpow2 = int(math.pow(2, math.ceil(math.log(self.H)/math.log(2))))
 		Wpow2 = int(math.pow(2, math.ceil(math.log(self.W)/math.log(2))))
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, Wpow2, Hpow2, 0,  GL_RGB, GL_UNSIGNED_BYTE, np.zeros((Wpow2, Hpow2, 3), dtype =np.uint8))
@@ -140,8 +143,23 @@ class Renderer:
 		self.y = self.H/Hpow2
 		self.x = self.W/Wpow2
 
+		self.SP['mean_texture_ID'] = glGenTextures(1)
+		glBindTexture(GL_TEXTURE_2D, self.SP['mean_texture_ID']) 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, Wpow2, Hpow2, 0,  GL_RGB, GL_UNSIGNED_BYTE, np.zeros((Wpow2, Hpow2, 3), dtype =np.uint8))
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER , GL_NEAREST)
+	
+	def set_mean_texture(self, mean):
+		glUseProgram(self.SP['PID'])
+		glActiveTexture(GL_TEXTURE1)
+		glBindTexture(GL_TEXTURE_2D, self.SP['mean_texture_ID']) 
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self.W, self.H, GL_RGB, GL_UNSIGNED_BYTE, mean)
+		
+		sampler_ID = glGetUniformLocation(self.SP['PID'], 'mean_texture_sampler')
+		glUniform1i(sampler_ID, 1) #set mean_texture_sampler uniform to 0 (that we just activated)
+		glUseProgram(0)
+
 	def switch_shader_type(self):
-		self.SP['uni_mode']['value'] = (self.SP['uni_mode']['value'] + 1) % 3
+		self.SP['uni_mode']['value'] = (self.SP['uni_mode']['value'] + 1) % 4
 		glUseProgram(self.SP['PID'])
 		glUniform1ui(self.SP['uni_mode']['ID'], self.SP['uni_mode']['value'])
 		glUseProgram(0)
@@ -157,8 +175,9 @@ class Renderer:
 		glDisable(GL_DEPTH_TEST)
 
 		#/2 send the image texture to the GPU
+		glActiveTexture(GL_TEXTURE0)
 		glEnable(GL_TEXTURE_2D)
-		glBindTexture(GL_TEXTURE_2D, self.background_texture_ID) 
+		glBindTexture(GL_TEXTURE_2D, self.SP['background_texture_ID']) 
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self.W, self.H, GL_RGB, GL_UNSIGNED_BYTE, image)
 		
 		#/3 Load a matrix for the rendering

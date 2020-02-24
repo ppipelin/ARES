@@ -7,6 +7,7 @@ in vec2 in_uv;
 out vec3 var_Wposition;
 out vec3 var_Wnormal;
 out vec2 var_uv;
+out vec2 viewportCoord;
 // Définition des uniforms
 uniform mat4 V;
 uniform mat4 M;
@@ -25,6 +26,8 @@ void main()
     vec3 WtoView = normalize(WcamPos - var_Wposition);
     mat4 MVP = P * V * M;
     gl_Position = MVP * vec4(in_position, 1.0);
+    vec3 ndc = gl_Position.xyz / gl_Position.w; //perspective divide/normalize
+    viewportCoord = ndc.xy * 0.5 + 0.5;
     vec4 WpositionH = (M * vec4(in_position, 1.0));
     var_Wposition = WpositionH.xyz / WpositionH.w;
     var_Wnormal = normalize(normalMatrix(M)*in_normal);

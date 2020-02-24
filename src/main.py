@@ -28,8 +28,6 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	[N, H, W, C] =  video.shape
 	mean_video = np.mean(video, axis=0, dtype=np.float32)
 	mean_video = mean_video.astype(np.uint8)
-	mean_video = cv2.cvtColor(mean_video,cv2.COLOR_RGB2BGR)
-	cv2.imshow('mean', mean_video)
 	# N = N//16
 	if(save is not 'nosave'):
 		video_to_save = np.empty((0, H, W, 3), dtype=np.uint8)
@@ -65,7 +63,8 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	model.load_from_obj(model_path+'model.obj')
 	
 	print('Background video texture initialization...')
-	renderer.init_background_texture()
+	renderer.init_textures()
+	renderer.set_mean_texture(mean_video)
 
 	
 	print('Detector creation and feature detection on model...')
@@ -128,7 +127,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 		if filtering_activated == True:
 			cTw = KF.predict()
-		else:
+		elif nb_inliers > 0:
 			cTw = np.column_stack((rmat[:,0], rmat[:,1], rmat[:,2], tvec))
 			cTw = np.vstack([cTw, [0,0,0,1]])
 		
