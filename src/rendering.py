@@ -13,7 +13,7 @@ def strid(name):
 class Renderer:
 
 
-	def __init__(self, H, W, use_debug=False):
+	def __init__(self, H, W, use_debug=True):
 		self.M = glm.identity(glm.mat4x4)
 		self.V = glm.identity(glm.mat4x4)
 		self.P = glm.identity(glm.mat4x4)
@@ -27,40 +27,45 @@ class Renderer:
 		self.x = 0
 		self.y = 0
 		self.SP = []
-		self.use_debug = use_debug
+
+		self.DSP = [] if use_debug else None
 
 
 
 	def init_shader_data(self, shader_folder, light_direction):
-		if self.use_debug:
-			self.init_shaders(shader_folder, [
+		if self.DSP is not None:
+			self.DSP = self.init_shaders(shader_folder, [
 				('vert.glsl', GL_VERTEX_SHADER),
 				('geo.glsl', GL_GEOMETRY_SHADER),
 				('line_frag.glsl', GL_FRAGMENT_SHADER),
-			], GL_TRIANGLES)
-			self.init_attrib_uni(['in_position', 'in_normal', 'in_uv'], [
+			], GL_TRIANGLES, self.DSP)
+			self.DSP = self.init_attrib_uni(['in_position', 'in_normal', 'in_uv'], [
 				('uni_WlightDirection', '3f', light_direction),
-			])
-		else:
-			self.init_shaders(shader_folder, [
-			('vert.glsl', GL_VERTEX_SHADER), 
-			('frag.glsl', GL_FRAGMENT_SHADER),
-			], GL_TRIANGLES)	
-			self.init_attrib_uni(['in_position', 'in_normal', 'in_uv'], [
-				('uni_WlightDirection', '3f', light_direction),
-				('uni_lightColor', '3f', (1, 1, 1)),
-				('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
-				('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
-				('uni_glossy', '4f', (1, 1, 1, 1000)),
-				('uni_mode', '1ui', 0),
-				('uni_resolution', '2i', (self.W, self.H)),
-			])
+			], self.DSP)
+			print('DSP: ')
+			print(self.DSP)
+		
+		self.SP = self.init_shaders(shader_folder, [
+		('vert.glsl', GL_VERTEX_SHADER), 
+		('frag.glsl', GL_FRAGMENT_SHADER),
+		], GL_TRIANGLES, self.SP)	
+		self.SP = self.init_attrib_uni(['in_position', 'in_normal', 'in_uv'], [
+			('uni_WlightDirection', '3f', light_direction),
+			('uni_lightColor', '3f', (1, 1, 1)),
+			('uni_diffuse', '3f', (0.5, 0.5, 0.5)),
+			('uni_ambiant', '3f', (0.2, 0.2, 0.2)),
+			('uni_glossy', '4f', (1, 1, 1, 1000)),
+			('uni_mode', '1ui', 0),
+			('uni_resolution', '2i', (self.W, self.H)),
+		], self.SP)
+		print('SP: ')
+		print(self.SP)
 		
 
 
-	def init_shaders(self, folder, shaders, GL_PRIMITIVE_TARGET):
+	def init_shaders(self, folder, shaders, GL_PRIMITIVE_TARGET, SP):
 		program_ID = glCreateProgram()
-		self.SP = {'PID': program_ID, 'target': GL_PRIMITIVE_TARGET}
+		SP = {'PID': program_ID, 'target': GL_PRIMITIVE_TARGET}
 
 		for shader_name, GL_SHADER_TYPE in shaders:
 			shader_filepath = folder + shader_name
@@ -82,21 +87,21 @@ class Renderer:
 			print(error)
 			raise Exception('Failed to link the shader program!', error)
 		
-		print('shader program: ', self.SP)
 		print('init shader: done!')
+		return SP
 	
-	def init_attrib_uni(self, attribs, unis):
-		glUseProgram(self.SP['PID'])
+	def init_attrib_uni(self, attribs, unis, SP):
+		glUseProgram(SP['PID'])
 
 		for attrib_name in attribs:
-			id = self.addAttribute(attrib_name)
-			self.SP[strid(attrib_name)] = id
+			id = self.addAttribute(attrib_name, SP['PID'])
+			SP[strid(attrib_name)] = id
 
 		for uni_name, utype, value in unis:
-			id = self.addUniform(uni_name)
-			self.SP[uni_name] = {'value': value, 'utype': utype, 'ID': id}
+			id = self.addUniform(uni_name, SP['PID'])
+			SP[uni_name] = {'value': value, 'utype': utype, 'ID': id}
 			if id == -1:
-				print('Warning, the uniform ' + uni_name + ' is not recognized by the SP ' + str(self.SP['PID']))
+				print('Warning, the uniform ' + uni_name + ' is not recognized by the SP ' + str(SP['PID']))
 			else:
 				if utype == '2i':
 					glUniform2i(id, value[0], value[1])
@@ -109,27 +114,28 @@ class Renderer:
 				else:
 					raise('The uniform type ' + utype + ' is not recognized! And the value is ' + str(value))
 
-		P_ID = self.addUniform('P')
-		V_ID = self.addUniform('V')
-		M_ID = self.addUniform('M')
+		P_ID = self.addUniform('P', SP['PID'])
+		V_ID = self.addUniform('V', SP['PID'])
+		M_ID = self.addUniform('M', SP['PID'])
 
-		self.SP['P_ID'] = P_ID
-		self.SP['V_ID'] = V_ID
-		self.SP['M_ID'] = M_ID
+		SP['P_ID'] = P_ID
+		SP['V_ID'] = V_ID
+		SP['M_ID'] = M_ID
 
 		glUseProgram(0)
+		return SP
 
 
-	def addAttribute(self, attrib_name):
-		id = glGetAttribLocation(self.SP['PID'], attrib_name)
+	def addAttribute(self, attrib_name, pid):
+		id = glGetAttribLocation(pid, attrib_name)
 		if id == -1:
-			print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'" of the program ' + str(self.SP['PID'])))
+			print(Warning('Failed to get the ID of the Attribute "'+attrib_name+'" of the program ' + str(pid)))
 		return id
 
-	def addUniform(self, uni_name):
-		id = glGetUniformLocation(self.SP['PID'], uni_name)
+	def addUniform(self, uni_name, pid):
+		id = glGetUniformLocation(pid, uni_name)
 		if id == -1:
-			print(Warning('Failed to get the ID of the Uniform "'+uni_name+'" of the program ' + str(self.SP['PID'])))
+			print(Warning('Failed to get the ID of the Uniform "'+uni_name+'" of the program ' + str(pid)))
 		return id
 
 	# Allocate a big texture on the OpenGL context, and returns its ID and the max uv coords of the corresonding given height/width
@@ -254,34 +260,30 @@ class Renderer:
 
 		self.update_V = True
 		
-
 	def render_model(self, model, t):
-		glUseProgram(self.SP['PID'])
-
-		if self.SP['M_ID'] != -1:
-			glUniformMatrix4fv(self.SP['M_ID'], 1, GL_FALSE, glm.value_ptr(self.M))
-			self.update_M = False
-		if self.SP['V_ID'] != -1:
-			glUniformMatrix4fv(self.SP['V_ID'], 1, GL_FALSE, glm.value_ptr(self.V))
-			self.update_V = False
-		if self.SP['P_ID'] != -1:
-			glUniformMatrix4fv(self.SP['P_ID'], 1, GL_FALSE, glm.value_ptr(self.P))
-			self.update_P = False
-
 		glEnable(GL_DEPTH_TEST)
-		# glDepthFunc(GL_LESS)
 		glEnable(GL_BLEND)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-		# glEnable(GL_CULL_FACE)
-		# glCullFace(GL_FRONT)
 
-		model.render(self.SP)
-		#glDisable(GL_CULL_FACE)
-
+		self.__render_model(model, t, self.SP)
+		if self.DSP is not None:
+			self.__render_model(model, t, self.DSP)
+		
 		glDisable(GL_BLEND)
 		glDisable(GL_DEPTH_TEST)
-
-		
-
-	def reset_program(self):
+		self.update_M = False
+		self.update_V = False
+		self.update_P = False
 		glUseProgram(0)
+
+	def __render_model(self, model, t, SP):
+		glUseProgram(SP['PID'])
+
+		if SP['M_ID'] != -1 :
+			glUniformMatrix4fv(SP['M_ID'], 1, GL_FALSE, glm.value_ptr(self.M))
+		if SP['V_ID'] != -1 :
+			glUniformMatrix4fv(SP['V_ID'], 1, GL_FALSE, glm.value_ptr(self.V))
+		if SP['P_ID'] != -1 :
+			glUniformMatrix4fv(SP['P_ID'], 1, GL_FALSE, glm.value_ptr(self.P))
+
+		model.render(SP)

@@ -35,7 +35,7 @@ void main()
     vec3 WtoView = normalize(WcamPos - point);
     vec3 Wreflected = reflect(WtoView, normal);
 
-    vec3 direction = uni_WlightDirection; 
+    vec3 direction = normal; 
 
     vec3 point1 = point + 0.01*direction;
     vec3 point2 = point1 + direction * MAGNITUDE;

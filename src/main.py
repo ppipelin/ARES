@@ -18,7 +18,7 @@ from filtering import *
 
 #http://chev.me/arucogen/
 #https://bitesofcode.wordpress.com/2017/09/12/augmented-reality-with-python-and-opencv-part-1/
-def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name, video_name, unmute):
+def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shader_folder, save, model_name, video_name, unmute, dsp):
 	
 	#cv2.waitKey(0)
 
@@ -40,7 +40,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 	K = np.matrix([[F, 0, u0], [0, F, v0], [0, 0, 1]])
 	dist = np.array([[ 0.12740911, -0.37299138, -0.00393397,  0.000759 ,   0.43353899]])
 	
-	renderer = Renderer(H, W)
+	renderer = Renderer(H, W, dsp)
 
 	
 	print('Pygame initilization...')
@@ -137,9 +137,7 @@ def main(data_folder, descriptor_choice, extra_desc_param, do_calibration, shade
 
 		
 		renderer.render_model(model, t)
-		# if debug_shader:
-		# 	renderer.render_model(model, n*TPF)
-		renderer.reset_program()
+
 		# # 1/ Do the pose estimation
 		# beg = time.time()
 		# kp_frame, des_frame = detector.detectAndCompute(gray, None)
@@ -345,6 +343,7 @@ if __name__ == "__main__":
 	parser.add_argument('-m', '--model', type=str, required=False, default='cube', help="choose the model to render")
 	parser.add_argument('-v', '--video', type=str, required=False, default='book', help="select video (inside the data folder")
 	parser.add_argument('-u', '--unmute', action='store_true', required=False, default=False, help='disable perf prints')
+	parser.add_argument('--dsp', action='store_true', required=False, default=False, help='debug Shaders')
 
 	parser.set_defaults(do_calibration=False)
 	opt = parser.parse_args()
@@ -360,4 +359,4 @@ if __name__ == "__main__":
 	print("model		", opt.model)
 	print("#" * 100)
 
-	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save, opt.model, opt.video, opt.unmute)
+	main(opt.data_folder, opt.descriptor, opt.extra_desc_param, opt.do_calibration, opt.shader_folder, opt.save, opt.model, opt.video, opt.unmute, opt.dsp)
